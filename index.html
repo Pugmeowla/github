@@ -4,565 +4,982 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Andre Kwok — Timetable</title>
+
 <style>
-  :root{
-    --glass: rgba(255,255,255,0.55);
-    --glass-hi: rgba(255,255,255,0.75);
-    --line: rgba(255,255,255,0.6);
-    --ink: #1d1d1f;
-    --ink-soft: rgba(29,29,31,0.55);
-    --ink-faint: rgba(29,29,31,0.35);
-    --accent: #0a84ff;
+:root {
+  --glass: rgba(255,255,255,.55);
+  --glass-hi: rgba(255,255,255,.75);
+  --line: rgba(255,255,255,.6);
 
-    --chem:#12b5b0;
-    --phys:#0a84ff;
-    --ena:#e0a336;
-    --se:#a95bf0;
-    --engst:#f0568f;
-    --mah:#ff5b52;
-    --max1:#c23b2f;
-    --band:#5b6ee8;
+  --ink: #1d1d1f;
+  --ink-soft: rgba(29,29,31,.55);
+  --ink-faint: rgba(29,29,31,.35);
 
-    --break-bg: rgba(255,255,255,0.28);
-    --break-line: rgba(29,29,31,0.12);
+  --accent: #0a84ff;
 
-    --page-bg: transparent;
-    --shadow-panel: 0 10px 34px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
-    --shadow-card: 0 8px 22px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
-    --shadow-card-hover: 0 14px 32px rgba(0,0,0,0.18), 0 4px 10px rgba(0,0,0,0.1);
+  --chem: #12b5b0;
+  --phys: #0a84ff;
+  --ena: #e0a336;
+  --se: #a95bf0;
+  --engst: #f0568f;
+  --mah: #ff5b52;
+  --max1: #c23b2f;
+  --band: #5b6ee8;
+
+  --break-bg: rgba(255,255,255,.28);
+  --break-line: rgba(29,29,31,.12);
+
+  --page-bg: transparent;
+
+  --shadow-panel:
+    0 10px 34px rgba(0,0,0,.14),
+    0 2px 8px rgba(0,0,0,.06);
+
+  --shadow-card:
+    0 8px 22px rgba(0,0,0,.14),
+    0 2px 6px rgba(0,0,0,.08);
+
+  --shadow-card-hover:
+    0 14px 32px rgba(0,0,0,.18),
+    0 4px 10px rgba(0,0,0,.1);
+
+  /*
+    Horizontal spacing between days.
+    This is intentionally the same visual spacing
+    used around timetable sections/cards.
+  */
+  --column-gap: 8px;
+}
+
+[data-theme="dark"] {
+  --glass: rgba(32,32,36,.5);
+  --glass-hi: rgba(44,44,48,.62);
+  --line: rgba(255,255,255,.12);
+
+  --ink: #f5f5f7;
+  --ink-soft: rgba(245,245,247,.62);
+  --ink-faint: rgba(245,245,247,.38);
+
+  --accent: #409cff;
+
+  --break-bg: rgba(255,255,255,.05);
+  --break-line: rgba(255,255,255,.14);
+
+  --chem: #3fe0da;
+  --phys: #5aa9ff;
+  --ena: #f2bb3d;
+  --se: #c78cfb;
+  --engst: #ff7fab;
+  --mah: #ff7b73;
+  --max1: #ff9186;
+  --band: #8b9bff;
+
+  --page-bg:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(255,255,255,.05),
+      transparent 55%
+    ),
+    rgba(16,17,20,.78);
+
+  --shadow-panel:
+    0 10px 34px rgba(0,0,0,.5),
+    0 2px 8px rgba(0,0,0,.35);
+
+  --shadow-card:
+    0 8px 22px rgba(0,0,0,.45),
+    0 2px 6px rgba(0,0,0,.3);
+
+  --shadow-card-hover:
+    0 14px 32px rgba(0,0,0,.55),
+    0 4px 10px rgba(0,0,0,.35);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Helvetica Neue",
+    Inter,
+    sans-serif;
+
+  color: var(--ink);
+  min-height: 100vh;
+
+  padding: 36px 18px 70px;
+
+  background: var(--page-bg);
+  background-attachment: fixed;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 18px 26px;
+  margin-bottom: 26px;
+
+  background: var(--glass);
+
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+
+  border: 1px solid var(--line);
+  border-radius: 26px;
+
+  box-shadow: var(--shadow-panel);
+}
+
+.title-block .eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+
+  letter-spacing: .08em;
+  text-transform: uppercase;
+
+  color: var(--ink-faint);
+
+  margin-bottom: 4px;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: clamp(24px, 4vw, 32px);
+
+  margin: 0;
+  letter-spacing: -.02em;
+
+  color: var(--ink);
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+
+  margin-top: 3px;
+  font-weight: 400;
+}
+
+/* =========================================================
+   EMAIL
+========================================================= */
+
+.emailInputWrap {
+  margin-top: 10px;
+}
+
+#emailInput {
+  font-family: inherit;
+  font-size: 12px;
+
+  padding: 6px 10px;
+
+  border-radius: 10px;
+  border: 1px solid var(--line);
+
+  background: var(--glass-hi);
+  color: var(--ink);
+
+  width: 260px;
+  outline: none;
+
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease;
+}
+
+#emailInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(10,132,255,.12);
+}
+
+#emailInput::placeholder {
+  color: var(--ink-faint);
+}
+
+/* =========================================================
+   BELL
+========================================================= */
+
+.bell {
+  background: var(--glass-hi);
+
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  border: 1px solid var(--line);
+  border-radius: 18px;
+
+  padding: 12px 18px;
+  min-width: 230px;
+
+  box-shadow: var(--shadow-panel);
+}
+
+.bell .eyebrow2 {
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .1em;
+
+  color: var(--accent);
+
+  margin-bottom: 3px;
+}
+
+.bell .line1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+
+.bell .line2 {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.refreshRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+.refreshBtn {
+  font-family: inherit;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  color: var(--accent);
+  background: transparent;
+
+  border: 1px solid var(--line);
+  border-radius: 10px;
+
+  padding: 4px 9px;
+
+  cursor: pointer;
+
+  transition:
+    background .2s ease,
+    transform .2s ease;
+}
+
+.refreshBtn:hover {
+  background: var(--glass-hi);
+}
+
+.refreshBtn:active {
+  transform: scale(.95);
+}
+
+.refreshBtn[disabled] {
+  opacity: .5;
+  cursor: default;
+}
+
+.updatedAt {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.statusBanner {
+  text-align: center;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  padding: 12px 18px;
+  margin-bottom: 20px;
+
+  border-radius: 16px;
+
+  background: var(--glass);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  border: 1px solid var(--line);
+
+  color: var(--ink-soft);
+}
+
+.statusBanner.error {
+  color: #c23b2f;
+  border-color: rgba(194,59,47,.35);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.arrowbtn {
+  width: 34px;
+  height: 34px;
+
+  border-radius: 50%;
+
+  border: 1px solid var(--line);
+
+  background: var(--glass-hi);
+  color: var(--ink);
+
+  font-size: 15px;
+  font-weight: 700;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  transition:
+    transform .2s ease,
+    background .2s ease;
+
+  flex-shrink: 0;
+}
+
+.arrowbtn:hover {
+  background: var(--ink);
+  color: #fff;
+
+  transform: scale(1.06);
+}
+
+.arrowbtn:active {
+  transform: scale(.94);
+}
+
+/* =========================================================
+   WEEK
+========================================================= */
+
+.weekSwitch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 14px;
+
+  margin-bottom: 20px;
+}
+
+.weekSwitch .label {
+  min-width: 90px;
+
+  text-align: center;
+
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* =========================================================
+   MOBILE DAY
+========================================================= */
+
+.daySwitch {
+  display: none;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 14px;
+
+  margin-bottom: 18px;
+  padding: 10px 16px;
+
+  background: var(--glass);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.daySwitch .label {
+  text-align: center;
+  min-width: 130px;
+}
+
+.daySwitch .day {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.daySwitch .week {
+  font-size: 11px;
+  font-weight: 600;
+
+  color: var(--ink-faint);
+
+  text-transform: uppercase;
+  letter-spacing: .06em;
+
+  margin-top: 1px;
+}
+
+/* =========================================================
+   TIMETABLE
+========================================================= */
+
+.grid {
+  display: grid;
+
+  /*
+    Increased from 10px to 16px so the space between
+    day columns visually matches the section/card spacing.
+  */
+  grid-template-columns: 60px repeat(5, 1fr);
+
+  column-gap: var(--column-gap);
+  row-gap: var(--column-gap);
+}
+
+.grid .head {
+  font-weight: 600;
+
+  font-size: 14px;
+
+  text-align: center;
+
+  padding: 10px 4px 14px;
+
+  color: var(--ink);
+}
+
+.grid .head small {
+  display: block;
+
+  font-weight: 400;
+  font-size: 10.5px;
+
+  color: var(--ink-faint);
+
+  margin-top: 2px;
+
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.grid .head.today {
+  color: var(--accent);
+}
+
+.grid .head.today::after {
+  content: "";
+
+  display: block;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background: var(--accent);
+
+  margin: 5px auto 0;
+}
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+
+.day-column {
+  position: relative;
+
+  min-height: 610px;
+
+  background: rgba(255,255,255,.025);
+
+  border-radius: 18px;
+}
+
+[data-theme="dark"] .day-column {
+  background: rgba(255,255,255,.015);
+}
+
+.time-column {
+  position: relative;
+
+  min-height: 610px;
+}
+
+.time-label {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  transform: translateY(-50%);
+
+  text-align: center;
+
+  font-size: 10.5px;
+  font-weight: 500;
+
+  color: var(--ink-faint);
+}
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.cls {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  background: var(--glass-hi);
+
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+
+  border: 1px solid var(--line);
+  border-radius: 16px;
+
+  /*
+    Slight inset gives visually separated sections without
+    changing their actual timeline positions.
+  */
+  margin-top: 3px;
+  margin-bottom: 3px;
+
+  padding: 10px 12px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  box-shadow: var(--shadow-card);
+
+  transition:
+    transform .25s ease,
+    box-shadow .25s ease;
+
+  overflow: hidden;
+}
+
+.cls:hover {
+  transform: translateY(-2px);
+
+  box-shadow: var(--shadow-card-hover);
+}
+
+.cls .code {
+  font-weight: 700;
+
+  font-size: 12px;
+
+  color: var(--ink);
+
+  padding-left: 12px;
+
+  position: relative;
+}
+
+.cls .code::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 3px;
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: var(--c, var(--accent));
+}
+
+.cls .teacher {
+  font-size: 11px;
+
+  color: var(--ink-soft);
+
+  margin-top: 3px;
+}
+
+.cls .room {
+  font-size: 11px;
+
+  color: var(--ink-soft);
+
+  margin-top: auto;
+}
+
+.cls.now {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   BREAKS
+========================================================= */
+
+.break-card {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  margin-top: 3px;
+  margin-bottom: 3px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  background: var(--break-bg);
+
+  border: 1px dashed var(--break-line);
+
+  border-radius: 16px;
+
+  color: var(--ink-faint);
+}
+
+.break-card .tag {
+  font-size: 10.5px;
+
+  font-weight: 600;
+
+  letter-spacing: .06em;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   THEME
+========================================================= */
+
+.themeToggle {
+  position: fixed;
+
+  top: 18px;
+  right: 18px;
+
+  z-index: 60;
+
+  width: 38px;
+  height: 38px;
+
+  border-radius: 50%;
+
+  border: 1px solid var(--line);
+
+  background: var(--glass-hi);
+
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  box-shadow: var(--shadow-panel);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+
+  cursor: pointer;
+
+  transition: transform .2s ease;
+}
+
+.themeToggle:hover {
+  transform: scale(1.08);
+}
+
+.themeToggle:active {
+  transform: scale(.92);
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:760px) {
+
+  header {
+    flex-direction: column;
+    text-align: center;
   }
 
-  [data-theme="dark"]{
-    --glass: rgba(32,32,36,0.5);
-    --glass-hi: rgba(44,44,48,0.62);
-    --line: rgba(255,255,255,0.12);
-    --ink: #f5f5f7;
-    --ink-soft: rgba(245,245,247,0.62);
-    --ink-faint: rgba(245,245,247,0.38);
-    --accent: #409cff;
-    --break-bg: rgba(255,255,255,0.05);
-    --break-line: rgba(255,255,255,0.14);
+  .title-block {
+    display: flex;
 
-    --chem:#3fe0da;
-    --phys:#5aa9ff;
-    --ena:#f2bb3d;
-    --se:#c78cfb;
-    --engst:#ff7fab;
-    --mah:#ff7b73;
-    --max1:#ff9186;
-    --band:#8b9bff;
+    flex-direction: column;
+    align-items: center;
 
-    --page-bg: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.05), transparent 55%), rgba(16,17,20,0.78);
-    --shadow-panel: 0 10px 34px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.35);
-    --shadow-card: 0 8px 22px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3);
-    --shadow-card-hover: 0 14px 32px rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.35);
+    width: 100%;
   }
 
-  *{box-sizing:border-box; -webkit-font-smoothing:antialiased;}
-  html,body{margin:0;padding:0; height:100%;}
-  body{ background: var(--page-bg); background-attachment: fixed; }
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,sans-serif;
-    color:var(--ink);
-    min-height:100vh;
-    padding:36px 18px 70px;
+  #emailInput {
+    width: min(260px, 90vw);
   }
 
-  .wrap{max-width:1180px;margin:0 auto;}
-
-  header{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    padding:18px 26px;
-    margin-bottom:26px;
-    background:var(--glass);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border:1px solid var(--line);
-    border-radius:26px;
-    box-shadow: var(--shadow-panel);
+  .bell {
+    align-self: center;
+    text-align: center;
   }
 
-  .title-block .eyebrow{
-    font-size:11px;
-    font-weight:600;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:var(--ink-faint);
-    margin-bottom:4px;
+  .weekSwitch {
+    display: none;
   }
 
-  h1{
-    font-weight:700;
-    font-size:clamp(24px,4vw,32px);
-    margin:0;
-    letter-spacing:-0.02em;
-    color:var(--ink);
+  .daySwitch {
+    display: flex;
   }
 
-  .sub{
-    font-size:13px;
-    color:var(--ink-soft);
-    margin-top:3px;
-    font-weight:400;
+  .grid {
+    grid-template-columns: 44px 1fr;
+
+    column-gap: 12px;
   }
 
-  .emailInputWrap{
-    margin-top:10px;
+  .grid .head {
+    display: none;
   }
 
-  #emailInput{
-    font-family:inherit;
-    font-size:12px;
-    padding:6px 10px;
-    border-radius:10px;
-    border:1px solid var(--line);
-    background:var(--glass-hi);
-    color:var(--ink);
-    width:260px;
-    outline:none;
-    transition:border-color .2s ease, box-shadow .2s ease;
+  .grid .head.mobile-active {
+    display: block;
+    grid-column: 1 / -1;
   }
 
-  #emailInput:focus{
-    border-color:var(--accent);
-    box-shadow:0 0 0 3px rgba(10,132,255,0.12);
+  .grid > .time-column {
+    display: none;
   }
 
-  #emailInput::placeholder{
-    color:var(--ink-faint);
+  .grid > .day-column {
+    display: none;
   }
 
-  .bell{
-    background:var(--glass-hi);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border:1px solid var(--line);
-    border-radius:18px;
-    padding:12px 18px;
-    min-width:230px;
-    box-shadow: var(--shadow-panel);
+  .grid > .day-column[data-active="1"] {
+    display: block;
+
+    grid-column: 2;
   }
-
-  .bell .eyebrow2{
-    font-size:10px;
-    font-weight:700;
-    letter-spacing:.1em;
-    color:var(--accent);
-    margin-bottom:3px;
-  }
-
-  .bell .line1{font-size:15px;font-weight:600;letter-spacing:-0.01em;}
-  .bell .line2{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
-
-  .bell .refreshRow{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-top:8px;
-  }
-
-  .refreshBtn{
-    font-family:inherit;
-    font-size:11px;
-    font-weight:600;
-    color:var(--accent);
-    background:transparent;
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:4px 9px;
-    cursor:pointer;
-    transition: background .2s ease, transform .2s ease;
-  }
-
-  .refreshBtn:hover{ background:var(--glass-hi); }
-  .refreshBtn:active{ transform: scale(0.95); }
-  .refreshBtn[disabled]{ opacity:.5; cursor:default; }
-
-  .updatedAt{
-    font-size:10.5px;
-    color:var(--ink-faint);
-  }
-
-  .statusBanner{
-    text-align:center;
-    font-size:13px;
-    font-weight:500;
-    padding:12px 18px;
-    margin-bottom:20px;
-    border-radius:16px;
-    background:var(--glass);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border:1px solid var(--line);
-    color:var(--ink-soft);
-  }
-
-  .statusBanner.error{
-    color:#c23b2f;
-    border-color:rgba(194,59,47,0.35);
-  }
-
-  .arrowbtn{
-    width:34px;height:34px;
-    border-radius:50%;
-    border:1px solid var(--line);
-    background:var(--glass-hi);
-    color:var(--ink);
-    font-size:15px;
-    font-weight:700;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    transition: transform .2s ease, background .2s ease;
-    flex-shrink:0;
-  }
-
-  .arrowbtn:hover{ background:var(--ink); color:#fff; transform: scale(1.06); }
-  .arrowbtn:active{ transform: scale(0.94); }
-
-  .weekSwitch{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:14px;
-    margin-bottom:20px;
-  }
-
-  .weekSwitch .label{
-    min-width:90px;
-    text-align:center;
-    font-weight:600;
-    font-size:15px;
-    letter-spacing:-0.01em;
-  }
-
-  .daySwitch{
-    display:none;
-    align-items:center;
-    justify-content:center;
-    gap:14px;
-    margin-bottom:18px;
-    padding:10px 16px;
-    background:var(--glass);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border:1px solid var(--line);
-    border-radius:18px;
-  }
-
-  .daySwitch .label{
-    text-align:center;
-    min-width:130px;
-  }
-
-  .daySwitch .day{
-    font-weight:700;
-    font-size:15px;
-    letter-spacing:-0.01em;
-  }
-
-  .daySwitch .week{
-    font-size:11px;
-    font-weight:600;
-    color:var(--ink-faint);
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    margin-top:1px;
-  }
-
-  .grid{
-    display:grid;
-    grid-template-columns:60px repeat(5,1fr);
-    gap:10px;
-  }
-
-  .grid .head{
-    font-weight:600;
-    font-size:14px;
-    text-align:center;
-    padding:10px 4px 14px;
-    color:var(--ink);
-    letter-spacing:-0.01em;
-  }
-
-  .grid .head small{
-    display:block;
-    font-weight:400;
-    font-size:10.5px;
-    color:var(--ink-faint);
-    margin-top:2px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-  }
-
-  .grid .head.today{color:var(--accent);}
-
-  .grid .head.today::after{
-    content:"";
-    display:block;
-    width:5px;height:5px;
-    border-radius:50%;
-    background:var(--accent);
-    margin:5px auto 0;
-  }
-
-  .timecol{
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding-top:14px;
-  }
-
-  .timecol .lbl{
-    font-size:10.5px;
-    font-weight:500;
-    color:var(--ink-faint);
-    text-align:center;
-  }
-
-  .slot{min-height:70px;}
-
-  .slot.break{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:var(--break-bg);
-    border:1px dashed var(--break-line);
-    border-radius:16px;
-  }
-
-  .slot.break .tag{
-    font-size:10.5px;
-    font-weight:600;
-    letter-spacing:.06em;
-    color:var(--ink-faint);
-    text-transform:uppercase;
-  }
-
-  .slot.noinfo{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-
-  .slot.noinfo .tag{
-    font-size:10.5px;
-    font-weight:500;
-    color:var(--ink-faint);
-    font-style:italic;
-  }
-
-  .cls{
-    background:var(--glass-hi);
-    backdrop-filter: blur(18px) saturate(180%);
-    -webkit-backdrop-filter: blur(18px) saturate(180%);
-    border:1px solid var(--line);
-    border-radius:16px;
-    padding:11px 12px;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-    gap:3px;
-    box-shadow: var(--shadow-card);
-    transition: transform .25s ease, box-shadow .25s ease;
-  }
-
-  .cls:hover{
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-card-hover);
-  }
-
-  .cls .code{
-    font-weight:700;
-    font-size:12px;
-    color:var(--ink);
-    padding-left:12px;
-    position:relative;
-  }
-
-  .cls .code::before{
-    content:"";
-    position:absolute;
-    left:0; top:3px;
-    width:6px;height:6px;
-    border-radius:50%;
-    background:var(--c,var(--accent));
-  }
-
-  .cls .subj{
-    font-size:12px;
-    font-weight:500;
-    color:var(--ink);
-    line-height:1.25;
-  }
-
-  .cls .room{
-    font-size:11px;
-    color:var(--ink-soft);
-    margin-top:auto;
-  }
-
-  .cls.now{
-    outline:2px solid var(--accent);
-    outline-offset:2px;
-  }
-
-  .themeToggle{
-    position:fixed;
-    top:18px;
-    right:18px;
-    z-index:60;
-    width:38px;height:38px;
-    border-radius:50%;
-    border:1px solid var(--line);
-    background:var(--glass-hi);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: var(--shadow-panel);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:16px;
-    cursor:pointer;
-    transition: transform .2s ease;
-  }
-
-  .themeToggle:hover{ transform: scale(1.08); }
-  .themeToggle:active{ transform: scale(0.92); }
-
-  @media (max-width:760px){
-    header{ flex-direction:column; text-align:center; }
-
-    .title-block{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      width:100%;
-    }
-
-    #emailInput{
-      width:min(260px, 90vw);
-    }
-
-    .bell{
-      align-self:center;
-      text-align:center;
-    }
-
-    .weekSwitch{display:none;}
-    .daySwitch{display:flex;}
-
-    .grid{grid-template-columns:44px 1fr;}
-    .grid .head{display:none;}
-    .grid .head.mobile-active{
-      display:block;
-      grid-column:1/-1;
-    }
-
-    .grid > [data-day]:not([data-active="1"]) {
-      display:none;
-    }
-
-    .grid > [data-col]{
-      grid-column:2;
-    }
-  }
+}
 </style>
 </head>
 
 <body>
 
-<button class="themeToggle" id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+<button
+  class="themeToggle"
+  id="themeToggle"
+  aria-label="Toggle dark mode"
+>🌙</button>
 
 <div class="wrap">
 
-  <header>
-    <div class="title-block">
-      <div class="eyebrow">NBSC Manly Campus</div>
+<header>
 
-      <h1 id="profileName">Andre Kwok</h1>
+  <div class="title-block">
 
-      <div class="sub" id="profileSub">
-        Year 11 · Physics · Chemistry · Engineering Studies · English Advanced · Maths Ext 1
-      </div>
-
-      <div class="emailInputWrap">
-        <input
-          type="email"
-          id="emailInput"
-          placeholder="Enter email (e.g. jane.doe@education.nsw.gov.au)"
-          autocomplete="email"
-        />
-      </div>
+    <div class="eyebrow">
+      NBSC Manly Campus
     </div>
 
-    <div class="bell">
-      <div class="eyebrow2">NOW</div>
-      <div class="line1" id="bellLine1">Loading…</div>
-      <div class="line2" id="bellLine2"></div>
+    <h1 id="profileName">
+      Andre Kwok
+    </h1>
 
-      <div class="refreshRow">
-        <button class="refreshBtn" id="refreshBtn" title="Refresh timetable">
-          ↻ Refresh
-        </button>
-        <span class="updatedAt" id="updatedAt"></span>
-      </div>
+    <div class="emailInputWrap">
+      <input
+        type="text"
+        id="emailInput"
+        placeholder="Enter username (e.g. andre.kwok2)"
+        autocomplete="username"
+      >
     </div>
-  </header>
 
-  <div class="statusBanner" id="statusBanner" style="display:none;"></div>
-
-  <div class="weekSwitch" id="weekSwitch">
-    <button class="arrowbtn" id="weekPrev">‹</button>
-    <div class="label" id="weekLabel">Week B</div>
-    <button class="arrowbtn" id="weekNext">›</button>
   </div>
 
-  <div class="daySwitch" id="daySwitch">
-    <button class="arrowbtn" id="dayPrev">‹</button>
+  <div class="bell">
 
-    <div class="label">
-      <div class="day" id="dayLabel">Monday</div>
-      <div class="week" id="dayWeekLabel">Week B</div>
+    <div class="eyebrow2">
+      NOW
     </div>
 
-    <button class="arrowbtn" id="dayNext">›</button>
+    <div
+      class="line1"
+      id="bellLine1"
+    >
+      Loading…
+    </div>
+
+    <div
+      class="line2"
+      id="bellLine2"
+    ></div>
+
+    <div class="refreshRow">
+
+      <button
+        class="refreshBtn"
+        id="refreshBtn"
+        title="Refresh timetable"
+      >
+        ↻ Refresh
+      </button>
+
+      <span
+        class="updatedAt"
+        id="updatedAt"
+      ></span>
+
+    </div>
+
   </div>
 
-  <div class="grid" id="grid"></div>
+</header>
+
+<div
+  class="statusBanner"
+  id="statusBanner"
+  style="display:none"
+></div>
+
+<div
+  class="weekSwitch"
+  id="weekSwitch"
+>
+
+  <button
+    class="arrowbtn"
+    id="weekPrev"
+  >‹</button>
+
+  <div
+    class="label"
+    id="weekLabel"
+  >Week A</div>
+
+  <button
+    class="arrowbtn"
+    id="weekNext"
+  >›</button>
+
+</div>
+
+<div
+  class="daySwitch"
+  id="daySwitch"
+>
+
+  <button
+    class="arrowbtn"
+    id="dayPrev"
+  >‹</button>
+
+  <div class="label">
+
+    <div
+      class="day"
+      id="dayLabel"
+    >Monday</div>
+
+    <div
+      class="week"
+      id="dayWeekLabel"
+    >Week A</div>
+
+  </div>
+
+  <button
+    class="arrowbtn"
+    id="dayNext"
+  >›</button>
+
+</div>
+
+<div
+  class="grid"
+  id="grid"
+></div>
 
 </div>
 
 <script>
 
-/* =========================================================================
- * CONFIG
- * ========================================================================= */
+/* =========================================================
+   CONFIG
+========================================================= */
 
+/*
+  IMPORTANT:
+  Replace YOUR_JWT_HERE with your current JWT.
+*/
 const DEV_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3ODcwNDY0MTcsImV4cCI6MTc4ODI1NjAxNywiZW1haWxBZGRyZXNzIjoiYW5kcmUua3dvazJAZWR1Y2F0aW9uLm5zdy5nb3YuYXUiLCJmaXJzdG5hbWUiOiJBbmRyZSIsImxhc3RuYW1lIjoiS3dvayIsImdyb3VwcyI6WyJzdHVkZW50IiwieXIxMSJdfQ.DaFP6fthN8du2j6OApF95F6AICYhLjcxxHtL0q772uLyrFj_qBVwBW6opmmbiCBf-pxfZVCv3tQTuKIWV3sItvrGPX5OPVjnsbTWPlEMtUxcJyzy4j2Gx3b-F4MVWiDou0gHCJheLLP2PnQmSl6YEppsy9QAR8_mKp5em7AKO2ndexbPf-sfPvULlhE6nr1gzJVrFHA_ppuNzjERg3UMiSLKRyhqawRpMezH__Vf-tu7me3fMV7PgQhA5yopjqp_-Hf3SGw8_76deKh_w3aER_SOegKXxzLRqdDMWFvgBu5ceKyv395v5ZmYsOalp39GxBTjBF1NHlb8ODtk479U6g";
 
 const DEV_TOKEN_TYPE = "Bearer";
 
 const CONFIG = {
-  API_BASE: "https://intranet.nbscmanlys-h.schools.nsw.edu.au",
 
-  USER_EMAIL: "ed.burslem@education.nsw.gov.au",
+  API_BASE:
+    "https://intranet.nbscmanlys-h.schools.nsw.edu.au",
 
-  getAuth(){
-    if(DEV_TOKEN){
+  USER_EMAIL:
+    "andre.kwok2@education.nsw.gov.au",
+
+  getAuth() {
+
+    if (DEV_TOKEN && DEV_TOKEN !== "YOUR_JWT_HERE") {
+
       return {
         type: DEV_TOKEN_TYPE,
         token: DEV_TOKEN
       };
+
     }
 
-    const type = localStorage.getItem('type') || 'Bearer';
-    const token = localStorage.getItem('token') || 'YOUR_JWT_HERE';
+    const type =
+      localStorage.getItem("type") || "Bearer";
+
+    const token =
+      localStorage.getItem("token") ||
+      "YOUR_JWT_HERE";
 
     return {
       type,
@@ -572,210 +989,351 @@ const CONFIG = {
 };
 
 
-/* =========================================================================
- * PROFILE / EMAIL NAME PARSING
- * ========================================================================= */
+/* =========================================================
+   HELPERS
+========================================================= */
 
-function formatName(namePart){
-  if(!namePart) return '';
+function formatName(name) {
 
-  return namePart
-    .split('-')
-    .map(p =>
-      p.charAt(0).toUpperCase() +
-      p.slice(1).toLowerCase()
+  if (!name)
+    return "";
+
+  return name
+    .split(/[-\s]+/)
+    .filter(Boolean)
+    .map(part =>
+      part.charAt(0).toUpperCase() +
+      part.slice(1).toLowerCase()
     )
-    .join('-');
+    .join(" ");
 }
 
 
-function parseNameFromEmail(email){
-  if(!email || !email.includes('@')) return null;
+function nameFromEmail(email) {
 
-  const handle = email.split('@')[0];
-  const parts = handle.split('.');
+  if (!email || !email.includes("@"))
+    return null;
 
-  if(parts.length < 2) return null;
+  const local = email.split("@")[0];
 
-  const firstName = formatName(parts[0]);
+  const parts = local.split(".");
 
-  // Remove trailing digits from last name.
-  // Example:
-  // jane.doe123 -> Jane Doe
-  const rawLastName = parts[1].replace(/\d+$/g, '');
-  const lastName = formatName(rawLastName);
+  if (parts.length < 2)
+    return null;
 
-  if(!firstName || !lastName) return null;
-
-  return `${firstName} ${lastName}`;
+  return (
+    formatName(parts[0]) +
+    " " +
+    formatName(
+      parts[1].replace(/\d+$/, "")
+    )
+  );
 }
 
 
-function getCurrentEmail(){
-  const emailInput = document.getElementById('emailInput');
+function getCurrentEmail() {
 
-  if(emailInput && emailInput.value.trim()){
-    return emailInput.value.trim();
-  }
+  const input =
+    document.getElementById("emailInput");
 
-  return CONFIG.USER_EMAIL;
+  let username =
+    input.value.trim();
+
+  if (!username)
+    username =
+      CONFIG.USER_EMAIL.split("@")[0];
+
+  if (username.includes("@"))
+    username =
+      username.split("@")[0];
+
+  return username +
+    "@education.nsw.gov.au";
 }
 
 
-function updateProfileDisplay(email, apiProfile = null){
+function updateProfileDisplay(
+  email,
+  apiProfile = null
+) {
+
   let name = null;
 
-  // 1. Try API profile name first.
-  if(apiProfile){
+  if (apiProfile) {
+
     name =
       apiProfile.FullName ||
       apiProfile.fullName ||
       [
-        apiProfile.FirstName || apiProfile.firstName,
-        apiProfile.LastName || apiProfile.lastName
+        apiProfile.FirstName ||
+        apiProfile.firstName,
+
+        apiProfile.LastName ||
+        apiProfile.lastName
       ]
       .filter(Boolean)
-      .join(' ');
+      .join(" ");
   }
 
-  // 2. Fall back to parsing the email.
-  if(!name){
-    name = parseNameFromEmail(email);
-  }
+  if (!name)
+    name = nameFromEmail(email);
 
-  // 3. Final fallback.
-  if(!name){
+  if (!name)
     name = "Timetable";
-  }
 
-  document.getElementById('profileName').textContent = name;
-  document.title = `${name} — Timetable`;
+  document.getElementById(
+    "profileName"
+  ).textContent = name;
+
+  document.title =
+    `${name} — Timetable`;
 }
 
 
-/* =========================================================================
- * API CLIENT
- * ========================================================================= */
+function timeToMin(value) {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  )
+    return 0;
+
+  let str =
+    String(value).trim();
+
+  const ampm =
+    str.match(/\s*(AM|PM)$/i);
+
+  str =
+    str.replace(/\s*(AM|PM)$/i, "");
+
+  const parts =
+    str.split(":");
+
+  let h =
+    Number(parts[0]);
+
+  let m =
+    Number(parts[1] || 0);
+
+  if (ampm) {
+
+    const pm =
+      ampm[1].toLowerCase() === "pm";
+
+    if (pm && h < 12)
+      h += 12;
+
+    if (!pm && h === 12)
+      h = 0;
+  }
+
+  return h * 60 + m;
+}
+
+
+function formatTime(value) {
+
+  if (!value)
+    return "";
+
+  const total =
+    timeToMin(value);
+
+  const h =
+    Math.floor(total / 60);
+
+  const m =
+    total % 60;
+
+  return (
+    String(h).padStart(2, "0") +
+    ":" +
+    String(m).padStart(2, "0")
+  );
+}
+
+
+/*
+  IMPORTANT FIX:
+  Converts values such as:
+
+    1
+    "1"
+    "Period 1"
+    "period 1"
+    "P1"
+
+  into:
+
+    "1"
+*/
+function getPeriodNumber(value) {
+
+  if (
+    value === null ||
+    value === undefined
+  )
+    return "";
+
+  const str =
+    String(value).trim();
+
+  const match =
+    str.match(/(?:period|p)?\s*(\d+)/i);
+
+  return match
+    ? match[1]
+    : str;
+}
+
+
+/* =========================================================
+   API
+========================================================= */
 
 class ApiError extends Error {
-  constructor(message, status){
+
+  constructor(message, status) {
+
     super(message);
+
     this.status = status;
   }
 }
 
 
-async function apiGet(path){
-  const { type, token } = CONFIG.getAuth();
+async function apiGet(path) {
 
-  if(!token || token === 'YOUR_JWT_HERE'){
+  const {
+    type,
+    token
+  } = CONFIG.getAuth();
+
+  if (
+    !token ||
+    token === "YOUR_JWT_HERE"
+  ) {
+
     throw new ApiError(
-      'No credential configured for this session.',
+      "No credential configured for this session.",
       401
     );
   }
 
   let res;
 
-  try{
-    res = await fetch(CONFIG.API_BASE + path, {
-      method: 'GET',
-      headers: {
-        'Authorization': `${type} ${token}`,
-        'Accept': 'application/json'
+  try {
+
+    res = await fetch(
+      CONFIG.API_BASE + path,
+      {
+        method: "GET",
+
+        headers: {
+          Authorization:
+            `${type} ${token}`,
+
+          Accept:
+            "application/json"
+        }
       }
-    });
-  } catch(networkErr){
+    );
+
+  } catch (e) {
+
     throw new ApiError(
-      'Network error contacting the school intranet.',
+      "Network error contacting the school intranet.",
       0
     );
   }
 
-  if(res.status === 401){
+  if (res.status === 401)
+
     throw new ApiError(
-      'Your school session has expired.',
+      "Your school session has expired.",
       401
     );
-  }
 
-  if(res.status === 403){
+  if (res.status === 403)
+
     throw new ApiError(
-      'Access to this timetable was denied.',
+      "Access to this timetable was denied.",
       403
     );
-  }
 
-  if(res.status === 404){
+  if (res.status === 404)
+
     throw new ApiError(
-      'That endpoint was not found.',
+      "That endpoint was not found.",
       404
     );
-  }
 
-  if(!res.ok){
+  if (!res.ok)
+
     throw new ApiError(
       `Unexpected server response (${res.status}).`,
       res.status
     );
-  }
 
-  const contentType = res.headers.get('Content-Type') || '';
+  const contentType =
+    res.headers.get("Content-Type") || "";
 
-  if(!contentType.includes('application/json')){
+  if (!contentType.includes("application/json"))
+
     throw new ApiError(
-      'Server returned an unexpected response format.',
+      "Server returned an unexpected response format.",
       res.status
     );
-  }
 
-  try{
-    return await res.json();
-  } catch(parseErr){
-    throw new ApiError(
-      'Could not parse the server response.',
-      res.status
-    );
-  }
+  return await res.json();
 }
 
 
-/* =========================================================================
- * TIMETABLE SERVICE
- * ========================================================================= */
+/* =========================================================
+   SERVICE
+========================================================= */
 
 const timetableService = (() => {
 
   let cache = {
+
     email: null,
     timetable: null,
     bellTimes: null,
     startDate: null,
     profile: null,
     fetchedAt: null
+
   };
 
 
-  async function loadAll(force = false){
+  async function loadAll(force = false) {
 
-    const email = getCurrentEmail();
+    const email =
+      getCurrentEmail();
 
-    // If the email has changed, automatically invalidate the cache.
-    if(cache.email !== email){
+    if (cache.email !== email) {
+
       cache = {
+
         email,
+
         timetable: null,
         bellTimes: null,
         startDate: null,
         profile: null,
         fetchedAt: null
+
       };
     }
 
-    if(cache.timetable && !force){
+    if (
+      cache.timetable &&
+      !force
+    )
       return cache;
-    }
-
 
     const [
       timetable,
@@ -802,35 +1360,28 @@ const timetableService = (() => {
 
     ]);
 
-
     console.log(
-      'Timetable API response:',
+      "Timetable API response:",
       timetable
     );
 
     console.log(
-      'Bell times API response:',
+      "Bell times API response:",
       bellTimes
     );
 
-    console.log(
-      'Start-date API response:',
-      startDateRes
-    );
-
-    console.log(
-      'User profile API response:',
-      profile
-    );
-
-
     cache = {
+
       email,
+
       timetable,
       bellTimes,
       startDate: startDateRes,
       profile,
-      fetchedAt: new Date()
+
+      fetchedAt:
+        new Date()
+
     };
 
     return cache;
@@ -840,7 +1391,7 @@ const timetableService = (() => {
   return {
     loadAll,
 
-    get current(){
+    get current() {
       return cache;
     }
   };
@@ -848,100 +1399,151 @@ const timetableService = (() => {
 })();
 
 
-/* =========================================================================
- * A/B CYCLE + DATE LOGIC
- * ========================================================================= */
+/* =========================================================
+   CYCLE
+========================================================= */
 
 const CYCLE_DAYS = [
+
   "MonA",
   "TueA",
   "WedA",
   "ThuA",
   "FriA",
+
   "MonB",
   "TueB",
   "WedB",
   "ThuB",
   "FriB"
+
 ];
 
 
-function extractDateString(startDateRes){
-  if(!startDateRes) return null;
+const DAY_LABELS = {
 
-  if(typeof startDateRes === 'string'){
-    return startDateRes;
-  }
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday"
+
+};
+
+
+const DAY_ORDER = [
+
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri"
+
+];
+
+
+const WEEK_ORDER = [
+  "A",
+  "B"
+];
+
+
+function extractDateString(data) {
+
+  if (!data)
+    return null;
+
+  if (typeof data === "string")
+    return data;
 
   return (
-    startDateRes.startDate ||
-    startDateRes.StartDate ||
-    startDateRes.date ||
-    startDateRes.Date ||
+
+    data.startDate ||
+    data.StartDate ||
+    data.date ||
+    data.Date ||
     null
+
   );
 }
 
 
-function getTimetableDay(date, cycleStartDate){
+function getTimetableDay(
+  date,
+  cycleStartDate
+) {
 
-  const d = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
+  const d =
+    new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
 
-  const dow = d.getDay();
+  const dow =
+    d.getDay();
 
-  if(dow === 0 || dow === 6){
+  if (
+    dow === 0 ||
+    dow === 6
+  )
     return null;
-  }
 
-  if(!cycleStartDate){
+  if (!cycleStartDate)
     return null;
-  }
 
-  const start = new Date(
-    cycleStartDate.getFullYear(),
-    cycleStartDate.getMonth(),
-    cycleStartDate.getDate()
-  );
+  const start =
+    new Date(
+      cycleStartDate.getFullYear(),
+      cycleStartDate.getMonth(),
+      cycleStartDate.getDate()
+    );
 
-  if(d < start){
+  if (d < start)
     return null;
-  }
 
-  let schoolDaysElapsed = 0;
+  let elapsed = 0;
 
-  const cursor = new Date(start);
+  const cursor =
+    new Date(start);
 
-  while(cursor < d){
+  while (cursor < d) {
 
     cursor.setDate(
       cursor.getDate() + 1
     );
 
-    const cdow = cursor.getDay();
+    const cdow =
+      cursor.getDay();
 
-    if(cdow !== 0 && cdow !== 6){
-      schoolDaysElapsed++;
-    }
+    if (
+      cdow !== 0 &&
+      cdow !== 6
+    )
+      elapsed++;
   }
 
   return CYCLE_DAYS[
-    schoolDaysElapsed % 10
+    elapsed % 10
   ];
 }
 
 
-function dayNameToParts(dayName){
+function dayNameToParts(dayName) {
 
-  const week = dayName.slice(-1);
+  const clean =
+    String(dayName)
+      .trim();
 
-  const dayKey = dayName
-    .slice(0,-1)
-    .toLowerCase()
-    .slice(0,3);
+  const week =
+    clean.slice(-1)
+      .toUpperCase();
+
+  const dayKey =
+    clean
+      .slice(0, -1)
+      .toLowerCase()
+      .slice(0, 3);
 
   return {
     dayKey,
@@ -950,32 +1552,12 @@ function dayNameToParts(dayName){
 }
 
 
-/* =========================================================================
- * NORMALIZATION
- * ========================================================================= */
-
-const DAY_LABELS = {
-  mon:"Monday",
-  tue:"Tuesday",
-  wed:"Wednesday",
-  thu:"Thursday",
-  fri:"Friday"
-};
-
-const DAY_ORDER = [
-  "mon",
-  "tue",
-  "wed",
-  "thu",
-  "fri"
-];
-
-const WEEK_ORDER = [
-  "A",
-  "B"
-];
+/* =========================================================
+   SUBJECT COLOURS
+========================================================= */
 
 const FALLBACK_COLORS = [
+
   "var(--chem)",
   "var(--phys)",
   "var(--ena)",
@@ -984,280 +1566,670 @@ const FALLBACK_COLORS = [
   "var(--mah)",
   "var(--max1)",
   "var(--band)"
+
 ];
 
 const subjectColorMap = {};
 
 
-function colorForSubject(key){
+function colorForSubject(key) {
 
-  if(!subjectColorMap[key]){
+  const normalized =
+    String(key || "")
+      .toLowerCase();
 
-    const idx =
+  if (
+    normalized.includes("english") ||
+    normalized.includes("ena")
+  )
+    return "var(--ena)";
+
+  if (
+    normalized.includes("physics") ||
+    normalized.includes("phys")
+  )
+    return "var(--phys)";
+
+  if (
+    normalized.includes("chem")
+  )
+    return "var(--chem)";
+
+  if (
+    normalized.includes("software") ||
+    normalized === "se"
+  )
+    return "var(--se)";
+
+  if (
+    normalized.includes("engineering")
+  )
+    return "var(--engst)";
+
+  if (
+    normalized.includes("math") ||
+    normalized.includes("mah")
+  )
+    return "var(--mah)";
+
+  if (!subjectColorMap[normalized]) {
+
+    const index =
       Object.keys(subjectColorMap).length %
       FALLBACK_COLORS.length;
 
-    subjectColorMap[key] =
-      FALLBACK_COLORS[idx];
+    subjectColorMap[normalized] =
+      FALLBACK_COLORS[index];
   }
 
-  return subjectColorMap[key];
+  return subjectColorMap[normalized];
 }
 
+
+/* =========================================================
+   BELL TIMES
+========================================================= */
 
 function findBellTime(
   bellTimes,
   dayName,
   period
-){
+) {
 
-  if(!Array.isArray(bellTimes)){
+  if (!Array.isArray(bellTimes))
     return null;
+
+  const p =
+    getPeriodNumber(period)
+      .toLowerCase();
+
+  const d =
+    String(dayName ?? "")
+      .trim()
+      .toLowerCase();
+
+
+  let match =
+    bellTimes.find(bt => {
+
+      const bp =
+        getPeriodNumber(
+          bt.Period ??
+          bt.period ??
+          bt.PeriodNumber ??
+          bt.periodNumber ??
+          ""
+        ).toLowerCase();
+
+      const bd =
+        String(
+          bt.DayName ??
+          bt.dayName ??
+          ""
+        )
+        .trim()
+        .toLowerCase();
+
+      return (
+        bp === p &&
+        bd === d
+      );
+    });
+
+
+  if (!match) {
+
+    match =
+      bellTimes.find(bt => {
+
+        const bp =
+          getPeriodNumber(
+            bt.Period ??
+            bt.period ??
+            bt.PeriodNumber ??
+            bt.periodNumber ??
+            ""
+          ).toLowerCase();
+
+        const hasDay =
+          bt.DayName ||
+          bt.dayName;
+
+        return (
+          !hasDay &&
+          bp === p
+        );
+      });
   }
 
-  const match = bellTimes.find(bt =>
 
-    (
-      bt.DayName === dayName ||
-      bt.dayName === dayName ||
-      (!bt.DayName && !bt.dayName)
-    )
+  if (!match) {
 
-    &&
+    match =
+      bellTimes.find(bt => {
 
-    String(
-      bt.Period ?? bt.period
-    ) === String(period)
+        const bp =
+          getPeriodNumber(
+            bt.Period ??
+            bt.period ??
+            bt.PeriodNumber ??
+            bt.periodNumber ??
+            ""
+          ).toLowerCase();
 
-  );
-
-  if(!match){
-    return null;
+        return bp === p;
+      });
   }
+
+
+  if (!match)
+    return null;
+
 
   return {
 
     start:
-      match.StartTime ||
-      match.startTime ||
-      match.Start ||
-      match.start ||
+      match.StartTime ??
+      match.startTime ??
+      match.Start ??
+      match.start ??
+      match.BellStart ??
+      match.bellStart ??
       null,
 
     end:
-      match.EndTime ||
-      match.endTime ||
-      match.End ||
-      match.end ||
+      match.EndTime ??
+      match.endTime ??
+      match.End ??
+      match.end ??
+      match.BellEnd ??
+      match.bellEnd ??
       null
 
   };
 }
 
 
-function classifyPeriod(periodValue){
+/* =========================================================
+   NORMALISATION
+========================================================= */
+
+function classifyPeriod(value) {
 
   const p =
-    String(periodValue).toLowerCase();
+    String(value ?? "")
+      .toLowerCase();
 
-  if(p.includes('assembly')){
-    return 'assembly';
-  }
+  if (
+    p.includes("assembly")
+  )
+    return "assembly";
 
-  if(
-    p.includes('recess') ||
-    p === 'break'
-  ){
-    return 'break';
-  }
+  if (
+    p.includes("recess") ||
+    p === "break"
+  )
+    return "break";
 
-  if(p.includes('lunch')){
-    return 'lunch';
-  }
+  if (
+    p.includes("lunch")
+  )
+    return "lunch";
 
-  return 'class';
+  return "class";
 }
 
+
+function getTeacher(raw) {
+
+  const value =
+    raw.TeacherName ??
+    raw.teacherName ??
+    raw.TeacherFullName ??
+    raw.teacherFullName ??
+    raw.Teacher ??
+    raw.teacher ??
+    raw.StaffName ??
+    raw.staffName ??
+    "";
+
+  if (!value)
+    return "";
+
+  if (
+    typeof value === "string" &&
+    value.includes("@")
+  ) {
+
+    const local =
+      value.split("@")[0];
+
+    const parts =
+      local.split(".");
+
+    if (parts.length >= 2) {
+
+      return (
+        formatName(parts[0]) +
+        " " +
+        formatName(
+          parts[1].replace(/\d+$/, "")
+        )
+      );
+    }
+
+    return formatName(
+      local.replace(/\d+$/, "")
+    );
+  }
+
+  return String(value).trim();
+}
+
+
+function getRoom(raw) {
+
+  const value =
+    raw.RoomNumber ??
+    raw.roomNumber ??
+    raw.RoomName ??
+    raw.roomName ??
+    raw.Room ??
+    raw.room ??
+    raw.Location ??
+    raw.location ??
+    raw.RoomCode ??
+    raw.roomCode ??
+    "";
+
+  return value
+    ? String(value).trim()
+    : "";
+}
+
+
+function getSubject(raw) {
+
+  return (
+    raw.SubjectName ||
+    raw.Subject ||
+    raw.subjectName ||
+    raw.subject ||
+    raw.Class ||
+    raw.class ||
+    "Class"
+  );
+}
+
+
+function getCode(raw, subject) {
+
+  return (
+    raw.ClassCode ||
+    raw.classCode ||
+    raw.Code ||
+    raw.code ||
+    raw.Class ||
+    raw.class ||
+    subject
+  );
+}
+
+
+function getRawTimes(
+  raw,
+  bellTimes,
+  dayName,
+  period
+) {
+
+  const bt =
+    findBellTime(
+      bellTimes,
+      dayName,
+      period
+    );
+
+  return {
+
+    start:
+      bt?.start ||
+      raw.StartTime ||
+      raw.startTime ||
+      raw.Start ||
+      raw.start ||
+      null,
+
+    end:
+      bt?.end ||
+      raw.EndTime ||
+      raw.endTime ||
+      raw.End ||
+      raw.end ||
+      null
+
+  };
+}
+
+
+/* =========================================================
+   NORMALISE TIMETABLE
+========================================================= */
 
 function normalizeTimetable(
   rawTimetable,
   bellTimes
-){
+) {
 
   const grouped = {
+
     A: {
-      mon:[],
-      tue:[],
-      wed:[],
-      thu:[],
-      fri:[]
+      mon: [],
+      tue: [],
+      wed: [],
+      thu: [],
+      fri: []
     },
 
     B: {
-      mon:[],
-      tue:[],
-      wed:[],
-      thu:[],
-      fri:[]
+      mon: [],
+      tue: [],
+      wed: [],
+      thu: [],
+      fri: []
     }
+
   };
 
 
-  if(!Array.isArray(rawTimetable)){
+  if (!Array.isArray(rawTimetable))
     return grouped;
-  }
 
 
-  for(const raw of rawTimetable){
+  for (const raw of rawTimetable) {
 
     const dayName =
       raw.DayName ||
       raw.dayName;
 
-    if(!dayName){
+    if (!dayName)
       continue;
-    }
 
 
     const {
       dayKey,
       week
-    } = dayNameToParts(dayName);
+    } =
+      dayNameToParts(dayName);
 
 
-    if(
+    if (
       !grouped[week] ||
       !grouped[week][dayKey]
-    ){
+    )
       continue;
-    }
 
 
     const period =
       raw.Period ??
       raw.period;
 
+
     const kind =
       classifyPeriod(period);
 
 
-    const bt =
-      findBellTime(
+    const times =
+      getRawTimes(
+        raw,
         bellTimes,
         dayName,
         period
-      ) ||
-      {
-        start:
-          raw.StartTime ||
-          raw.startTime ||
-          null,
-
-        end:
-          raw.EndTime ||
-          raw.endTime ||
-          null
-      };
+      );
 
 
-    if(kind !== 'class'){
+    const subject =
+      getSubject(raw);
+
+
+    const code =
+      getCode(
+        raw,
+        subject
+      );
+
+
+    if (kind !== "class") {
 
       grouped[week][dayKey].push({
 
         kind,
 
-        start: bt.start,
-
-        end: bt.end,
+        start: times.start,
+        end: times.end,
 
         raw
-
       });
 
       continue;
     }
 
 
-    const subjName =
-      raw.Subject ||
-      raw.SubjectName ||
-      raw.subject ||
-      raw.Class ||
-      raw.class ||
-      'Class';
-
-
-    const code =
-      raw.ClassCode ||
-      raw.Class ||
-      raw.classCode ||
-      subjName;
-
-
-    const subjKey =
-      String(subjName)
-        .toLowerCase()
-        .replace(
-          /[^a-z0-9]+/g,
-          '-'
-        );
-
-
     grouped[week][dayKey].push({
 
-      kind: 'class',
+      kind: "class",
 
       code,
 
-      subjKey,
+      periodNumber:
+        getPeriodNumber(period),
 
-      subjName,
+      subjKey:
+        String(subject)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-"),
+
+      subjName: subject,
 
       teacher:
-        raw.Teacher ||
-        raw.teacher ||
-        null,
+        getTeacher(raw),
 
       room:
-        raw.Room ||
-        raw.room ||
-        null,
+        getRoom(raw),
 
-      start: bt.start,
-
-      end: bt.end,
+      start: times.start,
+      end: times.end,
 
       raw
 
     });
-
   }
 
 
-  for(const week of WEEK_ORDER){
+  /* =======================================================
+     EXPLICIT SCHOOL BREAKS
+  ======================================================= */
 
-    for(const dayKey of DAY_ORDER){
+  for (const week of WEEK_ORDER) {
 
-      grouped[week][dayKey].sort(
-        (a,b) => {
+    for (const day of DAY_ORDER) {
 
-          if(
-            !a.start ||
-            !b.start
-          ){
-            return 0;
-          }
+      const rows =
+        grouped[week][day];
 
-          return (
-            timeToMin(a.start) -
-            timeToMin(b.start)
+      const isWednesday =
+        day === "wed";
+
+      const breaks = [];
+
+
+      if (isWednesday) {
+
+        breaks.push({
+
+          kind: "assembly",
+
+          start: "10:45",
+          end: "11:05"
+
+        });
+
+
+        breaks.push({
+
+          kind: "break",
+
+          start: "11:05",
+          end: "11:25"
+
+        });
+
+
+        breaks.push({
+
+          kind: "lunch",
+
+          start: "12:20",
+          end: "13:00"
+
+        });
+
+      } else {
+
+        breaks.push({
+
+          kind: "break",
+
+          start: "10:45",
+          end: "11:05"
+
+        });
+
+
+        breaks.push({
+
+          kind: "lunch",
+
+          start: "12:55",
+          end: "13:35"
+
+        });
+
+      }
+
+
+      for (const br of breaks) {
+
+        const exists =
+          rows.some(item =>
+
+            item.start &&
+            item.end &&
+
+            timeToMin(item.start) ===
+              timeToMin(br.start) &&
+
+            timeToMin(item.end) ===
+              timeToMin(br.end)
+
           );
 
+
+        if (!exists)
+          rows.push(br);
+      }
+
+
+      /* =====================================================
+         WEDNESDAY OVERRIDES
+
+         P1/P2 = EXACTLY THE SAME AS OTHER DAYS
+
+         P3 = 11:25 → 12:20
+         Lunch = 12:20 → 13:00
+         P4 = 13:00 → 13:55
+         P5 = 13:55 → 14:50
+
+         This is deliberately based on the extracted
+         period number, so "Period 1", "P1", 1, etc.
+         all work correctly.
+      ===================================================== */
+
+      if (isWednesday) {
+
+const wednesdayTimes = {
+  "0": {
+    start: "07:55",
+    end: "08:55"
+  },
+  "1": {
+    start: "08:55",
+    end: "09:50"
+  },
+  "2": {
+    start: "09:50",
+    end: "10:45"
+  },
+  "3": {
+    start: "11:25",
+    end: "12:20"
+  },
+  "4": {
+    start: "13:00",
+    end: "13:55"
+  },
+  "5": {
+    start: "13:55",
+    end: "14:50"
+  }
+};
+
+
+        for (const item of rows) {
+
+          if (
+            item.kind !== "class"
+          )
+            continue;
+
+
+          const period =
+            item.periodNumber ||
+            getPeriodNumber(
+              item.raw?.Period ??
+              item.raw?.period
+            );
+
+
+          if (
+            wednesdayTimes[period]
+          ) {
+
+            item.start =
+              wednesdayTimes[
+                period
+              ].start;
+
+            item.end =
+              wednesdayTimes[
+                period
+              ].end;
+          }
         }
+      }
+
+
+      /* =====================================================
+         SORT BY REAL TIME
+      ===================================================== */
+
+      rows.sort(
+        (a, b) =>
+          timeToMin(a.start) -
+          timeToMin(b.start)
       );
 
     }
-
   }
 
 
@@ -1265,79 +2237,43 @@ function normalizeTimetable(
 }
 
 
-function buildRowTimes(schedule){
-
-  const set = new Set();
-
-
-  for(const week of WEEK_ORDER){
-
-    for(const dayKey of DAY_ORDER){
-
-      (
-        schedule[week][dayKey] ||
-        []
-      ).forEach(item => {
-
-        if(item.start){
-          set.add(item.start);
-        }
-
-      });
-
-    }
-
-  }
-
-
-  return Array.from(set)
-    .sort(
-      (a,b) =>
-        timeToMin(a) -
-        timeToMin(b)
-    );
-}
-
-
-/* =========================================================================
- * RENDERING
- * ========================================================================= */
+/* =========================================================
+   RENDER
+========================================================= */
 
 const grid =
-  document.getElementById('grid');
+  document.getElementById("grid");
 
 const statusBanner =
-  document.getElementById('statusBanner');
+  document.getElementById("statusBanner");
 
 const refreshBtn =
-  document.getElementById('refreshBtn');
+  document.getElementById("refreshBtn");
 
 const updatedAtEl =
-  document.getElementById('updatedAt');
+  document.getElementById("updatedAt");
 
 
 let SCHEDULE = {
 
-  A:{
-    mon:[],
-    tue:[],
-    wed:[],
-    thu:[],
-    fri:[]
+  A: {
+    mon: [],
+    tue: [],
+    wed: [],
+    thu: [],
+    fri: []
   },
 
-  B:{
-    mon:[],
-    tue:[],
-    wed:[],
-    thu:[],
-    fri:[]
+  B: {
+    mon: [],
+    tue: [],
+    wed: [],
+    thu: [],
+    fri: []
   }
 
 };
 
-
-let ROW_TIMES = [];
 
 let TODAY_CYCLE_DAY = null;
 
@@ -1346,64 +2282,107 @@ let currentWeek = "A";
 let seqIndex = 0;
 
 
+/* =========================================================
+   STATUS
+========================================================= */
+
 function setStatus(
   message,
-  isError
-){
+  isError = false
+) {
 
-  if(!message){
+  if (!message) {
 
     statusBanner.style.display =
-      'none';
+      "none";
 
     return;
   }
 
-
   statusBanner.style.display =
-    'block';
+    "block";
 
   statusBanner.className =
-    'statusBanner' +
-    (
-      isError
-        ? ' error'
-        : ''
-    );
+    "statusBanner" +
+    (isError ? " error" : "");
 
   statusBanner.textContent =
     message;
 }
 
 
-function timeToMin(t){
+/* =========================================================
+   DAY TIMELINE
+========================================================= */
 
-  if(!t){
-    return 0;
-  }
+/*
+  07:55 → 14:50
 
-  const [
-    h,
-    m
-  ] = t
-    .split(':')
-    .map(Number);
+  Wednesday uses the exact same coordinate system,
+  but its classes intentionally have large gaps for:
+
+  Assembly:
+    10:45 → 11:05
+
+  Recess:
+    11:05 → 11:25
+
+  Lunch:
+    12:20 → 13:00
+*/
+
+const TIMELINE_START =
+  7 * 60 + 55;
+
+const TIMELINE_END =
+  14 * 60 + 50;
+
+const TIMELINE_HEIGHT =
+  610;
+
+
+function timelineTop(time) {
+
+  const minutes =
+    timeToMin(time) -
+    TIMELINE_START;
 
   return (
-    h * 60 +
-    (m || 0)
-  );
+    minutes /
+    (TIMELINE_END - TIMELINE_START)
+  ) *
+  TIMELINE_HEIGHT;
 }
 
+
+function timelineHeight(
+  start,
+  end
+) {
+
+  const duration =
+    timeToMin(end) -
+    timeToMin(start);
+
+  return (
+    duration /
+    (TIMELINE_END - TIMELINE_START)
+  ) *
+  TIMELINE_HEIGHT;
+}
+
+
+/* =========================================================
+   TODAY
+========================================================= */
 
 function isToday(
   week,
   dayKey
-){
+) {
 
-  if(!TODAY_CYCLE_DAY){
+  if (!TODAY_CYCLE_DAY)
     return false;
-  }
 
   return (
     TODAY_CYCLE_DAY ===
@@ -1421,21 +2400,21 @@ function isNowActive(
   dayKey,
   start,
   end
-){
+) {
 
-  if(
+  if (
     !isToday(
       week,
       dayKey
     ) ||
     !start ||
     !end
-  ){
+  )
     return false;
-  }
 
 
-  const now = new Date();
+  const now =
+    new Date();
 
   const cur =
     now.getHours() * 60 +
@@ -1449,9 +2428,13 @@ function isNowActive(
 }
 
 
-function build(){
+/* =========================================================
+   BUILD
+========================================================= */
 
-  grid.innerHTML = '';
+function build() {
+
+  grid.innerHTML = "";
 
 
   const mobileDay =
@@ -1466,221 +2449,402 @@ function build(){
     ];
 
 
+  /* Corner */
+
   const corner =
-    document.createElement('div');
+    document.createElement("div");
 
   grid.appendChild(corner);
 
 
-  DAY_ORDER.forEach(d => {
+  /* Day headers */
 
-    const h =
-      document.createElement('div');
+  DAY_ORDER.forEach(day => {
 
-    h.className =
-      'head' +
+    const head =
+      document.createElement("div");
+
+    head.className =
+      "head" +
 
       (
         isToday(
           currentWeek,
-          d
+          day
         )
-          ? ' today'
-          : ''
+          ? " today"
+          : ""
       ) +
 
       (
-        d === mobileDay
-          ? ' mobile-active'
-          : ''
+        day === mobileDay
+          ? " mobile-active"
+          : ""
       );
 
 
-    h.innerHTML =
-      `${DAY_LABELS[d]}<small>Week ${currentWeek}</small>`;
+    head.innerHTML =
+      `${DAY_LABELS[day]}
+       <small>Week ${currentWeek}</small>`;
 
 
-    grid.appendChild(h);
+    grid.appendChild(head);
 
   });
 
 
-  const dataForWeek =
-    SCHEDULE[currentWeek];
+  /* =======================================================
+     TIME COLUMN
+  ======================================================= */
+
+  const timeColumn =
+    document.createElement("div");
+
+  timeColumn.className =
+    "time-column";
 
 
-  const maxRows =
-    ROW_TIMES.length;
+  const labels = [
+
+    "07:55",
+    "08:55",
+    "09:50",
+    "10:45",
+    "11:05",
+    "11:25",
+    "12:20",
+    "12:55",
+    "13:00",
+    "13:35",
+    "13:55",
+    "14:50"
+
+  ];
 
 
-  for(
-    let r = 0;
-    r < maxRows;
-    r++
-  ){
+  [
+    ...new Set(labels)
+  ].forEach(time => {
 
-    const rowStart =
-      ROW_TIMES[r];
+    if (
+      timeToMin(time) <
+      TIMELINE_START ||
 
-
-    const timecol =
-      document.createElement('div');
-
-    timecol.className =
-      'timecol';
-
-    timecol.innerHTML =
-      `<div class="lbl">${rowStart || ''}</div>`;
-
-    grid.appendChild(timecol);
+      timeToMin(time) >
+      TIMELINE_END
+    )
+      return;
 
 
-    DAY_ORDER.forEach(d => {
+    const label =
+      document.createElement("div");
 
-      const item =
-        (
-          dataForWeek[d] ||
-          []
-        ).find(
-          it =>
-            it.start === rowStart
-        );
+    label.className =
+      "time-label";
 
 
-      const cell =
-        document.createElement('div');
+    label.style.top =
+      `${timelineTop(time)}px`;
 
-      cell.className =
-        'slot';
 
-      cell.dataset.day =
-        d;
+    label.textContent =
+      time;
 
-      cell.dataset.col =
-        '1';
 
-      cell.dataset.active =
-        (
-          d === mobileDay
+    timeColumn.appendChild(label);
+
+  });
+
+
+  grid.appendChild(timeColumn);
+
+
+  /* =======================================================
+     DAY COLUMNS
+  ======================================================= */
+
+  DAY_ORDER.forEach(day => {
+
+    const column =
+      document.createElement("div");
+
+    column.className =
+      "day-column";
+
+
+    column.dataset.day =
+      day;
+
+
+    column.dataset.active =
+      day === mobileDay
+        ? "1"
+        : "0";
+
+
+    const rows =
+      SCHEDULE[
+        currentWeek
+      ]?.[day] || [];
+
+
+    rows.forEach(item => {
+
+      if (
+        !item.start ||
+        !item.end
+      )
+        return;
+
+
+      const start =
+        timeToMin(item.start);
+
+      const end =
+        timeToMin(item.end);
+
+
+      if (end <= start)
+        return;
+
+
+     const top =
+  timelineTop(item.start);
+
+const height =
+  timelineHeight(
+    item.start,
+    item.end
+  );
+
+const VERTICAL_GAP = 8;
+
+const finalTop =
+  top + VERTICAL_GAP / 2;
+
+const finalHeight =
+  Math.max(
+    height - VERTICAL_GAP,
+    20
+  );
+
+
+      /* =====================================================
+         BREAK
+      ===================================================== */
+
+      if (
+        item.kind !== "class"
+      ) {
+
+        const breakCard =
+          document.createElement("div");
+
+        breakCard.className =
+          "break-card";
+
+
+        breakCard.style.top =
+  `${finalTop}px`;
+
+breakCard.style.height =
+  `${finalHeight}px`;
+
+
+        let label =
+          "Break";
+
+
+        if (
+          item.kind === "lunch"
         )
-          ? '1'
-          : '0';
+          label = "Lunch";
 
 
-      if(!item){
+        if (
+          item.kind === "break"
+        )
+          label = "Recess";
 
-        // Empty slot.
 
-      }
+        if (
+          item.kind === "assembly"
+        )
+          label = "Assembly";
 
-      else if(
-        item.kind === 'break'
-      ){
 
-        cell.classList.add(
-          'break'
+        breakCard.innerHTML =
+          `<span class="tag">${label}</span>`;
+
+
+        column.appendChild(
+          breakCard
         );
 
-        cell.innerHTML =
-          '<span class="tag">Recess</span>';
 
+        return;
       }
 
-      else if(
-        item.kind === 'lunch'
-      ){
 
-        cell.classList.add(
-          'break'
+      /* =====================================================
+         CLASS CARD
+      ===================================================== */
+
+      const card =
+        document.createElement("div");
+
+
+      card.className =
+        "cls";
+
+
+      card.style.top =
+  `${finalTop}px`;
+
+card.style.height =
+  `${finalHeight}px`;
+
+
+      card.style.setProperty(
+        "--c",
+        colorForSubject(
+          item.subjKey
+        )
+      );
+
+
+      if (
+        isNowActive(
+          currentWeek,
+          day,
+          item.start,
+          item.end
+        )
+      ) {
+
+        card.classList.add("now");
+      }
+
+
+      /*
+        CODE
+        Example:
+
+        11ENA D2
+      */
+
+      const code =
+        document.createElement("div");
+
+      code.className =
+        "code";
+
+      code.textContent =
+        item.code || "";
+
+      card.appendChild(code);
+
+
+      /*
+        TEACHER
+        Example:
+
+        Rachele Haigh
+      */
+
+      const teacher =
+        document.createElement("div");
+
+      teacher.className =
+        "teacher";
+
+      teacher.textContent =
+        item.teacher || "";
+
+
+      if (item.teacher) {
+
+        card.appendChild(
+          teacher
         );
-
-        cell.innerHTML =
-          '<span class="tag">Lunch</span>';
-
       }
 
-      else if(
-        item.kind === 'assembly'
-      ){
 
-        cell.classList.add(
-          'break'
+      /*
+        ROOM
+        Example:
+
+        AR1008.141
+      */
+
+      const room =
+        document.createElement("div");
+
+      room.className =
+        "room";
+
+      room.textContent =
+        item.room || "";
+
+
+      if (item.room) {
+
+        card.appendChild(
+          room
         );
-
-        cell.innerHTML =
-          '<span class="tag">Assembly</span>';
-
-      }
-
-      else {
-
-        const active =
-          isNowActive(
-            currentWeek,
-            d,
-            item.start,
-            item.end
-          );
-
-
-        cell.innerHTML = `
-          <div
-            class="cls ${active ? 'now' : ''}"
-            style="--c:${colorForSubject(item.subjKey)}"
-          >
-            <div class="code">${item.code}</div>
-            <div class="subj">${item.subjName}</div>
-            ${
-              item.room
-                ? `<div class="room">${item.room}</div>`
-                : ''
-            }
-          </div>
-        `;
-
       }
 
 
-      grid.appendChild(cell);
+      column.appendChild(card);
 
     });
 
-  }
 
+    grid.appendChild(column);
+
+  });
+
+
+  /* Labels */
 
   document.getElementById(
-    'weekLabel'
+    "weekLabel"
   ).textContent =
     `Week ${currentWeek}`;
 
 
   document.getElementById(
-    'dayLabel'
+    "dayLabel"
   ).textContent =
     DAY_LABELS[mobileDay];
 
 
   document.getElementById(
-    'dayWeekLabel'
+    "dayWeekLabel"
   ).textContent =
     `Week ${mobileWeek}`;
+
 }
 
 
-function updateBell(){
+/* =========================================================
+   NOW BOX
+========================================================= */
+
+function updateBell() {
 
   const line1 =
     document.getElementById(
-      'bellLine1'
+      "bellLine1"
     );
 
   const line2 =
     document.getElementById(
-      'bellLine2'
+      "bellLine2"
     );
 
 
-  if(!TODAY_CYCLE_DAY){
+  if (!TODAY_CYCLE_DAY) {
 
     line1.textContent =
       "No school today";
@@ -1711,7 +2875,7 @@ function updateBell(){
 
 
   const rows =
-    SCHEDULE[week][dayKey] ||
+    SCHEDULE[week]?.[dayKey] ||
     [];
 
 
@@ -1719,93 +2883,101 @@ function updateBell(){
   let next = null;
 
 
-  for(const item of rows){
+  for (const item of rows) {
 
-    if(
-      item.kind === 'class' &&
-      item.start &&
-      item.end
-    ){
-
-      const s =
-        timeToMin(item.start);
-
-      const e =
-        timeToMin(item.end);
+    if (
+      !item.start ||
+      !item.end
+    )
+      continue;
 
 
-      if(
-        cur >= s &&
-        cur < e
-      ){
+    const s =
+      timeToMin(item.start);
 
-        current =
-          item;
-
-        break;
-      }
+    const e =
+      timeToMin(item.end);
 
 
-      if(
-        cur < s &&
-        !next
-      ){
+    if (
+      cur >= s &&
+      cur < e
+    ) {
 
-        next =
-          item;
-      }
+      if (
+        item.kind === "class"
+      )
+        current = item;
 
+      break;
     }
 
+
+    if (
+      cur < s &&
+      !next &&
+      item.kind === "class"
+    ) {
+
+      next = item;
+    }
   }
 
 
-  if(current){
+  if (current) {
 
     line1.textContent =
       `${current.code} — ${current.subjName}`;
 
-    line2.textContent =
-      `until ${current.end}${
-        current.room
-          ? ' · ' + current.room
-          : ''
-      }`;
 
+    line2.textContent =
+      `until ${formatTime(current.end)}` +
+      (
+        current.room
+          ? ` · ${current.room}`
+          : ""
+      );
+
+
+    return;
   }
 
-  else if(next){
+
+  if (next) {
 
     line1.textContent =
       `Next: ${next.code}`;
 
+
     line2.textContent =
-      `from ${next.start}${
+      `from ${formatTime(next.start)}` +
+      (
         next.room
-          ? ' · ' + next.room
-          : ''
-      }`;
+          ? ` · ${next.room}`
+          : ""
+      );
 
+
+    return;
   }
 
-  else {
 
-    line1.textContent =
-      "No more classes today";
+  line1.textContent =
+    "No more classes today";
 
-    line2.textContent =
-      DAY_LABELS[dayKey];
 
-  }
-
+  line2.textContent =
+    DAY_LABELS[dayKey];
 }
 
 
-/* =========================================================================
- * REFRESH
- * ========================================================================= */
+/* =========================================================
+   REFRESH
+========================================================= */
 
-async function refresh(force){
+async function refresh(
+  force = false
+) {
 
   refreshBtn.disabled =
     true;
@@ -1813,9 +2985,8 @@ async function refresh(force){
 
   setStatus(
     force
-      ? 'Refreshing timetable…'
-      : 'Loading timetable…',
-    false
+      ? "Refreshing timetable…"
+      : "Loading timetable…"
   );
 
 
@@ -1823,13 +2994,12 @@ async function refresh(force){
     getCurrentEmail();
 
 
-  // Immediately show the name parsed from the email.
   updateProfileDisplay(
     currentEmail
   );
 
 
-  try{
+  try {
 
     const {
       timetable,
@@ -1838,9 +3008,8 @@ async function refresh(force){
       profile,
       fetchedAt
     } =
-      await timetableService.loadAll(
-        force
-      );
+      await timetableService
+        .loadAll(force);
 
 
     const cycleStart =
@@ -1864,7 +3033,7 @@ async function refresh(force){
         : null;
 
 
-    if(TODAY_CYCLE_DAY){
+    if (TODAY_CYCLE_DAY) {
 
       currentWeek =
         TODAY_CYCLE_DAY.slice(-1);
@@ -1873,7 +3042,7 @@ async function refresh(force){
       const dayIdx =
         DAY_ORDER.indexOf(
           TODAY_CYCLE_DAY
-            .slice(0,3)
+            .slice(0, 3)
             .toLowerCase()
         );
 
@@ -1898,13 +3067,6 @@ async function refresh(force){
       );
 
 
-    ROW_TIMES =
-      buildRowTimes(
-        SCHEDULE
-      );
-
-
-    // Update the header using the API profile if available.
     updateProfileDisplay(
       currentEmail,
       profile
@@ -1914,145 +3076,141 @@ async function refresh(force){
     setStatus(null);
 
 
-    updatedAtEl.textContent =
-      `Updated ${
-        fetchedAt.toLocaleTimeString(
-          [],
-          {
-            hour:'2-digit',
-            minute:'2-digit'
-          }
-        )
-      }`;
+    if (fetchedAt) {
+
+      updatedAtEl.textContent =
+        `Updated ${
+          fetchedAt.toLocaleTimeString(
+            [],
+            {
+              hour: "2-digit",
+              minute: "2-digit"
+            }
+          )
+        }`;
+    }
 
 
     build();
 
     updateBell();
 
+  } catch (err) {
 
-  } catch(err){
-
-    const msg =
+    const message =
       err instanceof ApiError
-
         ? `Unable to load timetable. ${err.message}`
-
-        : 'Unable to load timetable. An unexpected error occurred.';
+        : "Unable to load timetable. An unexpected error occurred.";
 
 
     setStatus(
-      msg,
+      message,
       true
     );
 
 
     console.error(
-      'Timetable load failed:',
-      err.message
+      "Timetable load failed:",
+      err
     );
-
 
   } finally {
 
     refreshBtn.disabled =
       false;
-
   }
-
 }
 
 
-/* =========================================================================
- * EMAIL INPUT
- * ========================================================================= */
+/* =========================================================
+   EMAIL INPUT
+========================================================= */
 
 const emailInput =
   document.getElementById(
-    'emailInput'
+    "emailInput"
   );
 
 
 emailInput.value =
-  CONFIG.USER_EMAIL;
+  CONFIG.USER_EMAIL
+    .split("@")[0];
 
 
-/*
- * Update the name immediately when the user changes
- * the email field.
- */
 emailInput.addEventListener(
-  'input',
-  e => {
+  "input",
+  event => {
 
-    const newEmail =
-      e.target.value.trim();
+    const username =
+      event.target.value.trim();
 
 
     updateProfileDisplay(
-      newEmail
+      username
+        ? username +
+          "@education.nsw.gov.au"
+        : CONFIG.USER_EMAIL
     );
 
   }
 );
 
 
-/*
- * Actually fetch the new student's timetable
- * when the user finishes editing the email.
- */
 emailInput.addEventListener(
-  'change',
-  e => {
+  "change",
+  event => {
 
-    const newEmail =
-      e.target.value.trim();
+    let username =
+      event.target.value.trim();
 
 
-    if(!newEmail){
+    if (!username)
       return;
-    }
+
+
+    if (username.includes("@"))
+      username =
+        username.split("@")[0];
 
 
     CONFIG.USER_EMAIL =
-      newEmail;
+      username +
+      "@education.nsw.gov.au";
 
 
-    // Force the timetable service to reload
-    // for the new email.
     refresh(true);
 
   }
 );
 
 
-/*
- * Also allow pressing Enter in the email box
- * to immediately load the timetable.
- */
 emailInput.addEventListener(
-  'keydown',
-  e => {
+  "keydown",
+  event => {
 
-    if(e.key !== 'Enter'){
+    if (event.key !== "Enter")
       return;
-    }
 
 
-    e.preventDefault();
+    event.preventDefault();
 
 
-    const newEmail =
+    let username =
       emailInput.value.trim();
 
 
-    if(!newEmail){
+    if (!username)
       return;
-    }
+
+
+    if (username.includes("@"))
+      username =
+        username.split("@")[0];
 
 
     CONFIG.USER_EMAIL =
-      newEmail;
+      username +
+      "@education.nsw.gov.au";
 
 
     refresh(true);
@@ -2061,131 +3219,119 @@ emailInput.addEventListener(
 );
 
 
-/* =========================================================================
- * BUTTONS
- * ========================================================================= */
+/* =========================================================
+   BUTTONS
+========================================================= */
 
 refreshBtn.addEventListener(
-  'click',
+  "click",
   () => refresh(true)
 );
 
 
-/* Desktop: Week A <-> Week B */
+document
+  .getElementById("weekPrev")
+  .addEventListener(
+    "click",
+    () => {
 
-document.getElementById(
-  'weekPrev'
-).addEventListener(
-  'click',
-  () => {
-
-    currentWeek =
-      currentWeek === 'A'
-        ? 'B'
-        : 'A';
+      currentWeek =
+        currentWeek === "A"
+          ? "B"
+          : "A";
 
 
-    seqIndex =
-      WEEK_ORDER.indexOf(
-        currentWeek
-      ) * 5 +
+      seqIndex =
+        WEEK_ORDER.indexOf(
+          currentWeek
+        ) * 5 +
 
-      (
-        seqIndex % 5
-      );
-
-
-    build();
-
-  }
-);
+        (
+          seqIndex % 5
+        );
 
 
-document.getElementById(
-  'weekNext'
-).addEventListener(
-  'click',
-  () => {
-
-    currentWeek =
-      currentWeek === 'A'
-        ? 'B'
-        : 'A';
+      build();
+    }
+  );
 
 
-    seqIndex =
-      WEEK_ORDER.indexOf(
-        currentWeek
-      ) * 5 +
+document
+  .getElementById("weekNext")
+  .addEventListener(
+    "click",
+    () => {
 
-      (
-        seqIndex % 5
-      );
-
-
-    build();
-
-  }
-);
+      currentWeek =
+        currentWeek === "A"
+          ? "B"
+          : "A";
 
 
-/* Mobile: loop through all 10 day/week slots */
+      seqIndex =
+        WEEK_ORDER.indexOf(
+          currentWeek
+        ) * 5 +
 
-document.getElementById(
-  'dayPrev'
-).addEventListener(
-  'click',
-  () => {
-
-    seqIndex =
-      (
-        seqIndex + 9
-      ) % 10;
+        (
+          seqIndex % 5
+        );
 
 
-    currentWeek =
-      WEEK_ORDER[
-        Math.floor(
-          seqIndex / 5
-        )
-      ];
+      build();
+    }
+  );
 
 
-    build();
+document
+  .getElementById("dayPrev")
+  .addEventListener(
+    "click",
+    () => {
 
-  }
-);
-
-
-document.getElementById(
-  'dayNext'
-).addEventListener(
-  'click',
-  () => {
-
-    seqIndex =
-      (
-        seqIndex + 1
-      ) % 10;
+      seqIndex =
+        (seqIndex + 9) % 10;
 
 
-    currentWeek =
-      WEEK_ORDER[
-        Math.floor(
-          seqIndex / 5
-        )
-      ];
+      currentWeek =
+        WEEK_ORDER[
+          Math.floor(
+            seqIndex / 5
+          )
+        ];
 
 
-    build();
+      build();
+    }
+  );
 
-  }
-);
+
+document
+  .getElementById("dayNext")
+  .addEventListener(
+    "click",
+    () => {
+
+      seqIndex =
+        (seqIndex + 1) % 10;
 
 
-/* =========================================================================
- * INITIAL LOAD
- * ========================================================================= */
+      currentWeek =
+        WEEK_ORDER[
+          Math.floor(
+            seqIndex / 5
+          )
+        ];
+
+
+      build();
+    }
+  );
+
+
+/* =========================================================
+   INITIAL LOAD
+========================================================= */
 
 refresh(false);
 
@@ -2202,37 +3348,39 @@ setInterval(
 );
 
 
-/* =========================================================================
- * THEME
- * ========================================================================= */
+/* =========================================================
+   THEME
+========================================================= */
 
 const themeBtn =
   document.getElementById(
-    'themeToggle'
+    "themeToggle"
   );
 
 
 const mq =
   window.matchMedia(
-    '(prefers-color-scheme: dark)'
+    "(prefers-color-scheme: dark)"
   );
 
 
-function applyTheme(theme){
+function applyTheme(theme) {
 
-  document.documentElement.dataset.theme =
+  document.documentElement
+    .dataset.theme =
     theme;
 
+
   themeBtn.textContent =
-    theme === 'dark'
-      ? '☀️'
-      : '🌙';
+    theme === "dark"
+      ? "☀️"
+      : "🌙";
 }
 
 
-let stored =
+const stored =
   localStorage.getItem(
-    'timetable-theme'
+    "timetable-theme"
   );
 
 
@@ -2240,54 +3388,50 @@ applyTheme(
   stored ||
   (
     mq.matches
-      ? 'dark'
-      : 'light'
+      ? "dark"
+      : "light"
   )
 );
 
 
 mq.addEventListener(
-  'change',
-  e => {
+  "change",
+  event => {
 
-    if(
+    if (
       !localStorage.getItem(
-        'timetable-theme'
+        "timetable-theme"
       )
-    ){
+    ) {
 
       applyTheme(
-        e.matches
-          ? 'dark'
-          : 'light'
+        event.matches
+          ? "dark"
+          : "light"
       );
-
     }
-
   }
 );
 
 
 themeBtn.addEventListener(
-  'click',
+  "click",
   () => {
 
     const next =
       document.documentElement
-        .dataset
-        .theme === 'dark'
-        ? 'light'
-        : 'dark';
+        .dataset.theme === "dark"
+        ? "light"
+        : "dark";
 
 
     localStorage.setItem(
-      'timetable-theme',
+      "timetable-theme",
       next
     );
 
 
     applyTheme(next);
-
   }
 );
 
