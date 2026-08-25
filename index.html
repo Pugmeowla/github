@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Andre Kwok — Timetable</title>
-
+<link rel="icon" type="image/png" href="favicon.png">
 <style>
 :root {
   --glass: rgba(255,255,255,.55);
@@ -222,6 +222,12 @@ h1 {
 
 #emailInput::placeholder {
   color: var(--ink-faint);
+}
+
+.emailHint {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  margin-top: 5px;
 }
 
 /* =========================================================
@@ -693,36 +699,29 @@ h1 {
    THEME
 ========================================================= */
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .themeToggle {
-  position: fixed;
-
-  top: 18px;
-  right: 18px;
-
-  z-index: 60;
-
+  position: static;
+  flex-shrink: 0;
   width: 38px;
   height: 38px;
-
   border-radius: 50%;
-
   border: 1px solid var(--line);
-
   background: var(--glass-hi);
-
+  color: var(--ink);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-
   box-shadow: var(--shadow-panel);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 16px;
-
   cursor: pointer;
-
   transition: transform .2s ease;
 }
 
@@ -734,6 +733,271 @@ h1 {
   transform: scale(.92);
 }
 
+/* =========================================================
+   HEADER BUTTONS
+========================================================= */
+
+.header-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.infoToggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--glass-hi);
+  color: var(--ink);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-panel);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    transform .2s ease,
+    background .2s ease;
+}
+
+.infoToggle:hover {
+  transform: scale(1.08);
+  background: var(--glass);
+}
+
+.infoToggle:active {
+  transform: scale(.92);
+}
+
+/* =========================================================
+   INFORMATION POPUP
+========================================================= */
+
+.infoOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, .25);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transition:
+    opacity .2s ease,
+    visibility .2s ease;
+}
+
+.infoOverlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.infoPopup {
+  width: min(620px, 100%);
+  max-height: min(720px, 90vh);
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--glass-hi);
+
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+
+  border: 1px solid var(--line);
+  border-radius: 26px;
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, .25),
+    0 4px 16px rgba(0, 0, 0, .12);
+
+  transform: translateY(12px) scale(.97);
+
+  transition:
+    transform .25s ease;
+}
+
+.infoOverlay.open .infoPopup {
+  transform: translateY(0) scale(1);
+}
+
+.infoPopupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 20px 22px 14px;
+}
+
+.infoPopupTitle {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.infoPopupSubtitle {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+
+.infoClose {
+  width: 32px;
+  height: 32px;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: var(--glass);
+  color: var(--ink);
+
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition:
+    transform .2s ease,
+    background .2s ease;
+}
+
+.infoClose:hover {
+  background: var(--glass-hi);
+  transform: scale(1.08);
+}
+
+.infoClose:active {
+  transform: scale(.92);
+}
+
+.infoPopupBody {
+  padding: 0 22px 22px;
+  overflow-y: auto;
+}
+
+.infoTextarea {
+  width: 100%;
+  min-height: 280px;
+  max-height: 55vh;
+
+  resize: vertical;
+
+  padding: 16px;
+
+  border: 1px solid var(--line);
+  border-radius: 16px;
+
+  background: var(--glass);
+  color: var(--ink);
+
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+
+  outline: none;
+
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease;
+}
+
+.infoTextarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, .12);
+}
+
+.infoTextarea::placeholder {
+  color: var(--ink-faint);
+}
+
+.infoPopupFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-top: 10px;
+}
+
+.infoSaved {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.infoClear {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+
+  padding: 7px 11px;
+
+  background: var(--glass);
+  color: var(--ink-soft);
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background .2s ease,
+    transform .2s ease;
+}
+
+.infoClear:hover {
+  background: var(--glass-hi);
+}
+
+.infoClear:active {
+  transform: scale(.96);
+}
+
+@media(max-width:760px) {
+  .header-buttons {
+    flex-direction: row;
+  }
+
+  .infoOverlay {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .infoPopup {
+    max-height: 90vh;
+    border-radius: 24px;
+  }
+
+  .infoTextarea {
+    min-height: 240px;
+  }
+}
 /* =========================================================
    MOBILE
 ========================================================= */
@@ -805,11 +1069,7 @@ h1 {
 
 <body>
 
-<button
-  class="themeToggle"
-  id="themeToggle"
-  aria-label="Toggle dark mode"
->🌙</button>
+
 
 <div class="wrap">
 
@@ -826,18 +1086,21 @@ h1 {
     </h1>
 
     <div class="emailInputWrap">
-      <input
-        type="text"
-        id="emailInput"
-        placeholder="Enter username (e.g. andre.kwok2)"
-        autocomplete="username"
-      >
+     <input
+  type="text"
+  id="emailInput"
+  placeholder="Enter the start of your email"
+  autocomplete="username"
+>
+<div class="emailHint">
+  Enter the start of your email and press Enter
+</div>
     </div>
 
   </div>
 
+<div class="header-right">
   <div class="bell">
-
     <div class="eyebrow2">
       NOW
     </div>
@@ -855,7 +1118,6 @@ h1 {
     ></div>
 
     <div class="refreshRow">
-
       <button
         class="refreshBtn"
         id="refreshBtn"
@@ -868,12 +1130,110 @@ h1 {
         class="updatedAt"
         id="updatedAt"
       ></span>
+    </div>
+  </div>
+
+  <div class="header-buttons">
+    <button
+      class="themeToggle"
+      id="themeToggle"
+      aria-label="Toggle dark mode"
+      title="Toggle dark mode"
+    >🌙</button>
+
+    <button
+      class="infoToggle"
+      id="infoToggle"
+      aria-label="Open information"
+      title="Extra information"
+    >ⓘ</button>
+  </div>
+</div>
+
+   
+
+  
+
+
+
+
+
+      
 
     </div>
 
   </div>
 
 </header>
+<!-- =========================================================
+     INFORMATION POPUP
+========================================================= -->
+
+<div
+  class="infoOverlay"
+  id="infoOverlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="infoPopupTitle"
+>
+  <div class="infoPopup">
+
+    <div class="infoPopupHeader">
+      <div>
+        <div
+          class="infoPopupTitle"
+          id="infoPopupTitle"
+        >
+          Notes and "About this timetable"
+        </div>
+
+        <div class="infoPopupSubtitle">
+
+        </div>
+      </div>
+
+      <button
+        class="infoClose"
+        id="infoClose"
+        aria-label="Close information"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="infoPopupBody">
+
+      <textarea
+        class="infoTextarea"
+        id="infoTextarea"
+        placeholder="Hi its me Andre Kwok, this is my timetable replacement I made because the original one looks so bad and OGGYP is down. This was made with a lot of love, dedication and too much vibe-coding. 
+      
+To not waste a button, you can write extra information here, such as notes about your classes, reminders, or anything else you want to keep track of. This information is automatically saved in your browser and will be available the next time you visit this page.
+
+Please don't show this to anyone in the tech block or I'm scared I'll be executed on the spot for using the schools API."
+      ></textarea>
+
+      <div class="infoPopupFooter">
+        <span
+          class="infoSaved"
+          id="infoSaved"
+        >
+
+        </span>
+
+        <button
+          class="infoClear"
+          id="infoClear"
+          type="button"
+        >
+          Clear
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
 
 <div
   class="statusBanner"
@@ -2331,8 +2691,8 @@ function setStatus(
     12:20 → 13:00
 */
 
-const TIMELINE_START =
-  7 * 60 + 55;
+const DEFAULT_TIMELINE_START = 7 * 60 + 55;
+const NO_PERIOD_0_START = 8 * 60 + 55;
 
 const TIMELINE_END =
   14 * 60 + 50;
@@ -2340,6 +2700,21 @@ const TIMELINE_END =
 const TIMELINE_HEIGHT =
   610;
 
+let TIMELINE_START =
+  DEFAULT_TIMELINE_START;
+
+function hasPeriodZero() {
+  const week = SCHEDULE[currentWeek];
+
+  if (!week) return false;
+
+  return DAY_ORDER.some(day =>
+    (week[day] || []).some(item =>
+      item.kind === "class" &&
+      String(item.periodNumber) === "0"
+    )
+  );
+}
 
 function timelineTop(time) {
 
@@ -2433,9 +2808,12 @@ function isNowActive(
 ========================================================= */
 
 function build() {
-
   grid.innerHTML = "";
 
+  // Hide Period 0 entirely if this student does not have one
+  TIMELINE_START = hasPeriodZero()
+    ? DEFAULT_TIMELINE_START
+    : NO_PERIOD_0_START;
 
   const mobileDay =
     DAY_ORDER[
@@ -3132,9 +3510,12 @@ const emailInput =
   );
 
 
+const savedUsername =
+  localStorage.getItem("timetable-username");
+
 emailInput.value =
-  CONFIG.USER_EMAIL
-    .split("@")[0];
+  savedUsername ||
+  CONFIG.USER_EMAIL.split("@")[0];
 
 
 emailInput.addEventListener(
@@ -3174,11 +3555,15 @@ emailInput.addEventListener(
 
 
     CONFIG.USER_EMAIL =
-      username +
-      "@education.nsw.gov.au";
+  username +
+  "@education.nsw.gov.au";
 
+localStorage.setItem(
+  "timetable-username",
+  username
+);
 
-    refresh(true);
+refresh(true);
 
   }
 );
@@ -3209,11 +3594,15 @@ emailInput.addEventListener(
 
 
     CONFIG.USER_EMAIL =
-      username +
-      "@education.nsw.gov.au";
+  username +
+  "@education.nsw.gov.au";
 
+localStorage.setItem(
+  "timetable-username",
+  username
+);
 
-    refresh(true);
+refresh(true);
 
   }
 );
@@ -3385,12 +3774,7 @@ const stored =
 
 
 applyTheme(
-  stored ||
-  (
-    mq.matches
-      ? "dark"
-      : "light"
-  )
+  stored || "light"
 );
 
 
@@ -3434,7 +3818,152 @@ themeBtn.addEventListener(
     applyTheme(next);
   }
 );
+/* =========================================================
+   INFORMATION POPUP
+========================================================= */
 
+const infoBtn =
+  document.getElementById("infoToggle");
+
+const infoOverlay =
+  document.getElementById("infoOverlay");
+
+const infoClose =
+  document.getElementById("infoClose");
+
+const infoTextarea =
+  document.getElementById("infoTextarea");
+
+const infoClear =
+  document.getElementById("infoClear");
+
+const infoSaved =
+  document.getElementById("infoSaved");
+
+const INFO_STORAGE_KEY =
+  "timetable-extra-information";
+
+
+/* Load saved information */
+
+const savedInfo =
+  localStorage.getItem(
+    INFO_STORAGE_KEY
+  );
+
+if (savedInfo !== null) {
+  infoTextarea.value = savedInfo;
+}
+
+
+/* Open popup */
+
+function openInfoPopup() {
+  infoOverlay.classList.add("open");
+
+  document.body.style.overflow = "hidden";
+
+  setTimeout(() => {
+    infoTextarea.focus();
+  }, 150);
+}
+
+
+/* Close popup */
+
+function closeInfoPopup() {
+  infoOverlay.classList.remove("open");
+
+  document.body.style.overflow = "";
+}
+
+
+/* Information button */
+
+infoBtn.addEventListener(
+  "click",
+  openInfoPopup
+);
+
+
+/* Close button */
+
+infoClose.addEventListener(
+  "click",
+  closeInfoPopup
+);
+
+
+/* Click outside popup */
+
+infoOverlay.addEventListener(
+  "click",
+  event => {
+    if (
+      event.target === infoOverlay
+    ) {
+      closeInfoPopup();
+    }
+  }
+);
+
+
+/* Escape key */
+
+document.addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Escape" &&
+      infoOverlay.classList.contains("open")
+    ) {
+      closeInfoPopup();
+    }
+  }
+);
+
+
+/* Automatically save text */
+
+infoTextarea.addEventListener(
+  "input",
+  () => {
+
+    localStorage.setItem(
+      INFO_STORAGE_KEY,
+      infoTextarea.value
+    );
+
+    infoSaved.textContent =
+      "Saved automatically";
+  }
+);
+
+
+/* Clear button */
+
+infoClear.addEventListener(
+  "click",
+  () => {
+
+    if (
+      !confirm(
+        "Clear all information?"
+      )
+    ) {
+      return;
+    }
+
+    infoTextarea.value = "";
+
+    localStorage.removeItem(
+      INFO_STORAGE_KEY
+    );
+
+    infoSaved.textContent =
+      "Cleared";
+  }
+);
 </script>
 
 </body>
