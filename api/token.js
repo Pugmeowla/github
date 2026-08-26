@@ -5,12 +5,12 @@ export default async function handler(req, res) {
     });
   }
 
-  const email = process.env.SCHOOL_EMAIL;
+  const emailAddress = process.env.SCHOOL_EMAIL;
   const password = process.env.SCHOOL_PASSWORD;
   const apiBase = process.env.SCHOOL_API_BASE;
 
-  if (!email || !password || !apiBase) {
-    console.error("Required server environment variables are missing.");
+  if (!emailAddress || !password || !apiBase) {
+    console.error("Required environment variables are missing.");
 
     return res.status(500).json({
       error: "Server authentication is not configured."
@@ -25,22 +25,14 @@ export default async function handler(req, res) {
         "Accept": "application/json"
       },
       body: JSON.stringify({
-        email,
+        emailAddress,
         password
       })
     });
 
-    const contentType =
-      response.headers.get("content-type") || "";
-
-    const body = contentType.includes("application/json")
-      ? await response.json()
-      : await response.text();
-
     if (!response.ok) {
       console.error(
-        "School token request failed:",
-        response.status
+        `School API returned HTTP ${response.status}`
       );
 
       return res.status(response.status).json({
@@ -48,56 +40,31 @@ export default async function handler(req, res) {
       });
     }
 
-    /*
-     * IMPORTANT:
-     *
-     * At this stage we deliberately do NOT return the
-     * school's JWT to the browser.
-     *
-     * We are only testing that Vercel can authenticate
-     * against the school API.
-     */
+    const data = await response.json();
 
-    const token =
-      body?.token ||
-      body?.access_token ||
-      body?.accessToken;
+    const token = data?.token;
 
     if (!token) {
-      console.error(
-        "School API returned a successful response but no token."
-      );
+      console.error("School API response did not contain a token.");
 
       return res.status(502).json({
         error: "School API did not return a token."
       });
     }
 
-    /*
-     * Decode the JWT payload only on the server.
-     * This lets us verify that it is a JWT and inspect
-     * its expiration without exposing it.
-     */
-
+    // Read the JWT expiration without exposing the JWT.
     let expiresAt = null;
 
     try {
-      const parts = token.split(".");
+      const payload = JSON.parse(
+        Buffer.from(token.split(".")[1], "base64url").toString("utf8")
+      );
 
-      if (parts.length === 3) {
-        const payload = JSON.parse(
-          Buffer.from(parts[1], "base64url").toString("utf8")
-        );
-
-        if (typeof payload.exp === "number") {
-          expiresAt = new Date(
-            payload.exp * 1000
-          ).toISOString();
-        }
+      if (typeof payload.exp === "number") {
+        expiresAt = new Date(payload.exp * 1000).toISOString();
       }
     } catch {
-      // Token may not be a standard JWT.
-      // Authentication itself still succeeded.
+      console.error("Unable to decode JWT expiration.");
     }
 
     return res.status(200).json({
@@ -108,10 +75,8 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error(
-      "Token generator error:",
-      error instanceof Error
-        ? error.message
-        : "Unknown error"
+      "Token request error:",
+      error instanceof Error ? error.message : "Unknown error"
     );
 
     return res.status(502).json({
