@@ -210,31 +210,26 @@ If anything breaks or if you have any suggestions for me to add, please contanct
 <script>
 const CONFIG={
   API_BASE:"https://intranet.nbscmanlys-h.schools.nsw.edu.au",
-  USER_EMAIL:"andre.kwok2@education.nsw.gov.au",
   TOKEN_URL:"https://timetable-ivory-nine.vercel.app/api/token",
-  getAuth(){
-    const cached=JSON.parse(localStorage.getItem("weekly-token")||"null");
-    return cached?.token?{type:cached.type||"Bearer",token:cached.token}:{type:"Bearer",token:null};
-  }
+  USER_EMAIL:"andre.kwok2@education.nsw.gov.au"
 };
 
-function getWeekKey(){
-  const d=new Date();
-  const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-  const day=t.getUTCDay()||7;
-  t.setUTCDate(t.getUTCDate()+4-day);
-  const year=t.getUTCFullYear();
-  const start=new Date(Date.UTC(year,0,1));
-  const week=Math.ceil((((t-start)/86400000)+1)/7);
-  return `${year}-W${String(week).padStart(2,"0")}`;
+function decodeJwtPayload(token){
+  try{
+    const part=token.split(".")[1];
+    return JSON.parse(atob(part.replace(/-/g,"+").replace(/_/g,"/")));
+  }catch{
+    return null;
+  }
 }
 
-async function loadWeeklyToken(){
-  const key=getWeekKey();
-  const cached=JSON.parse(localStorage.getItem("weekly-token")||"null");
+async function loadToken(){
+  const cached=JSON.parse(localStorage.getItem("school-token")||"null");
+  const REFRESH_BEFORE=60*60*1000;
 
-  if(cached?.week===key&&cached?.token){
-    return cached;
+  if(cached?.token&&cached?.exp){
+    const expiresAt=cached.exp*1000;
+    if(Date.now()<expiresAt-REFRESH_BEFORE)return cached;
   }
 
   const res=await fetch(CONFIG.TOKEN_URL,{
@@ -243,7 +238,7 @@ async function loadWeeklyToken(){
   });
 
   if(!res.ok){
-    throw new ApiError("Unable to obtain the weekly school token.",res.status);
+    throw new ApiError("Unable to obtain the school token.",res.status);
   }
 
   const data=await res.json();
@@ -252,13 +247,20 @@ async function loadWeeklyToken(){
     throw new ApiError("Token server did not return a token.",502);
   }
 
+  const payload=decodeJwtPayload(data.token);
+
+  if(!payload?.exp){
+    throw new ApiError("Token did not contain an expiration time.",502);
+  }
+
   const auth={
-    week:key,
     token:data.token,
-    type:data.type||"Bearer"
+    type:data.type||"Bearer",
+    iat:payload.iat||null,
+    exp:payload.exp
   };
 
-  localStorage.setItem("weekly-token",JSON.stringify(auth));
+  localStorage.setItem("school-token",JSON.stringify(auth));
   return auth;
 }
 
@@ -284,50 +286,64 @@ function getCurrentEmail(){
 
 function updateProfileDisplay(email,apiProfile=null){
   let name=null;
+
   if(apiProfile){
     name=apiProfile.FullName||apiProfile.fullName||[
       apiProfile.FirstName||apiProfile.firstName,
       apiProfile.LastName||apiProfile.lastName
     ].filter(Boolean).join(" ");
   }
+
   if(!name)name=nameFromEmail(email);
   if(!name)name="Timetable";
+
   document.getElementById("profileName").textContent=name;
   document.title=`${name} — Timetable`;
 }
 
 function timeToMin(value){
   if(value==null||value==="")return 0;
+
   let str=String(value).trim(),ampm=str.match(/\s*(AM|PM)$/i);
   str=str.replace(/\s*(AM|PM)$/i,"");
+
   const parts=str.split(":");
   let h=Number(parts[0]),m=Number(parts[1]||0);
+
   if(ampm){
     const pm=ampm[1].toLowerCase()==="pm";
     if(pm&&h<12)h+=12;
     if(!pm&&h===12)h=0;
   }
+
   return h*60+m;
 }
 
 function formatTime(value){
   if(!value)return"";
+
   const total=timeToMin(value),h=Math.floor(total/60),m=total%60;
+
   return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
 }
 
 function getPeriodNumber(value){
   if(value==null)return"";
+
   const str=String(value).trim(),match=str.match(/(?:period|p)?\s*(\d+)/i);
+
   return match?match[1]:str;
 }
 
 class ApiError extends Error{
-  constructor(message,status){super(message);this.status=status}
+  constructor(message,status){
+    super(message);
+    this.status=status;
+  }
 }
 
-async function apiGet(path){
-  const {type,token}=await loadWeeklyToken();
+async function apiGet(path,retry=true){
+  const {type,token}=await loadToken();
 
   if(!token){
     throw new ApiError("Unable to obtain a school token.",401);
@@ -347,14 +363,26 @@ async function apiGet(path){
     throw new ApiError("Network error contacting the school intranet.",0);
   }
 
-  if(res.status===401){
-    localStorage.removeItem("weekly-token");
-    throw new ApiError("Your school session has expired.",401);
+  if(res.status===401&&retry){
+    localStorage.removeItem("school-token");
+    return apiGet(path,false);
   }
 
-  if(res.status===403)throw new ApiError("Access to this timetable was denied.",403);
-  if(res.status===404)throw new ApiError("That endpoint was not found.",404);
-  if(!res.ok)throw new ApiError(`Unexpected server response (${res.status}).`,res.status);
+  if(res.status===401){
+    throw new ApiError("The new school session was rejected.",401);
+  }
+
+  if(res.status===403){
+    throw new ApiError("Access to this timetable was denied.",403);
+  }
+
+  if(res.status===404){
+    throw new ApiError("That endpoint was not found.",404);
+  }
+
+  if(!res.ok){
+    throw new ApiError(`Unexpected server response (${res.status}).`,res.status);
+  }
 
   const contentType=res.headers.get("Content-Type")||"";
 
@@ -366,14 +394,32 @@ async function apiGet(path){
 }
 
 const timetableService=(()=>{
-  let cache={email:null,timetable:null,bellTimes:null,startDate:null,profile:null,fetchedAt:null};
+  let cache={
+    email:null,
+    timetable:null,
+    bellTimes:null,
+    startDate:null,
+    profile:null,
+    fetchedAt:null
+  };
 
   async function loadAll(force=false){
     const email=getCurrentEmail();
-    if(cache.email!==email)cache={email,timetable:null,bellTimes:null,startDate:null,profile:null,fetchedAt:null};
+
+    if(cache.email!==email){
+      cache={
+        email,
+        timetable:null,
+        bellTimes:null,
+        startDate:null,
+        profile:null,
+        fetchedAt:null
+      };
+    }
+
     if(cache.timetable&&!force)return cache;
 
-    const[timetable,bellTimes,startDateRes,profile]=await Promise.all([
+    const [timetable,bellTimes,startDateRes,profile]=await Promise.all([
       apiGet(`/api/timetable/${encodeURIComponent(email)}`),
       apiGet("/api/timetable/bell-times").catch(()=>null),
       apiGet("/api/timetable/settings/start-date").catch(()=>null),
@@ -383,173 +429,454 @@ const timetableService=(()=>{
     console.log("Timetable API response:",timetable);
     console.log("Bell times API response:",bellTimes);
 
-    cache={email,timetable,bellTimes,startDate:startDateRes,profile,fetchedAt:new Date()};
+    cache={
+      email,
+      timetable,
+      bellTimes,
+      startDate:startDateRes,
+      profile,
+      fetchedAt:new Date()
+    };
+
     return cache;
   }
 
-  return{loadAll,get current(){return cache}};
+  return{
+    loadAll,
+    get current(){
+      return cache;
+    }
+  };
 })();
 
-const CYCLE_DAYS=["MonA","TueA","WedA","ThuA","FriA","MonB","TueB","WedB","ThuB","FriB"];
-const DAY_LABELS={mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday"};
+const CYCLE_DAYS=[
+  "MonA","TueA","WedA","ThuA","FriA",
+  "MonB","TueB","WedB","ThuB","FriB"
+];
+
+const DAY_LABELS={
+  mon:"Monday",
+  tue:"Tuesday",
+  wed:"Wednesday",
+  thu:"Thursday",
+  fri:"Friday"
+};
+
 const DAY_ORDER=["mon","tue","wed","thu","fri"];
 const WEEK_ORDER=["A","B"];
 
 function extractDateString(data){
   if(!data)return null;
   if(typeof data==="string")return data;
-  return data.startDate||data.StartDate||data.date||data.Date||null;
+
+  return data.startDate||
+    data.StartDate||
+    data.date||
+    data.Date||
+    null;
 }
 
 function getTimetableDay(date,cycleStartDate){
-  const d=new Date(date.getFullYear(),date.getMonth(),date.getDate()),dow=d.getDay();
+  const d=new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+
+  const dow=d.getDay();
+
   if(dow===0||dow===6||!cycleStartDate)return null;
 
-  const start=new Date(cycleStartDate.getFullYear(),cycleStartDate.getMonth(),cycleStartDate.getDate());
+  const start=new Date(
+    cycleStartDate.getFullYear(),
+    cycleStartDate.getMonth(),
+    cycleStartDate.getDate()
+  );
+
   if(d<start)return null;
 
-  let elapsed=0,cursor=new Date(start);
+  let elapsed=0;
+  const cursor=new Date(start);
+
   while(cursor<d){
     cursor.setDate(cursor.getDate()+1);
+
     const cdow=cursor.getDay();
+
     if(cdow!==0&&cdow!==6)elapsed++;
   }
+
   return CYCLE_DAYS[elapsed%10];
 }
 
 function dayNameToParts(dayName){
-  const clean=String(dayName).trim(),week=clean.slice(-1).toUpperCase();
-  return{dayKey:clean.slice(0,-1).toLowerCase().slice(0,3),week};
+  const clean=String(dayName).trim();
+  const week=clean.slice(-1).toUpperCase();
+
+  return{
+    dayKey:clean.slice(0,-1).toLowerCase().slice(0,3),
+    week
+  };
 }
 
-const FALLBACK_COLORS=["var(--cat-other)"],subjectColorMap={};
+const FALLBACK_COLORS=["var(--cat-other)"];
+const subjectColorMap={};
 
 function colorForSubject(key){
   const normalized=String(key||"").toLowerCase();
 
-  if(normalized.includes("math")||normalized.includes("mah")||normalized.includes("ma")||normalized.includes("extension")||normalized.includes("mx1")||normalized.includes("mx2")||normalized.includes("max1")||normalized.includes("max2")||/\bmat\b/.test(normalized))return"var(--cat-math)";
-  if(normalized.includes("english")||normalized.includes("enx")||normalized.includes("ena"))return"var(--cat-english)";
-  if(normalized.includes("engineer")||normalized.includes("software")||normalized==="se"||normalized.includes("-se-")||normalized.includes("se")||normalized.startsWith("se-")||normalized.endsWith("-se")||normalized.includes("technology")||normalized.includes("textile")||normalized.includes("graphics")||normalized.includes("digital")||normalized.includes("computing")||normalized.includes("ict")||normalized.includes("design")||normalized.includes("engst"))return"var(--cat-technology)";
+  if(
+    normalized.includes("math")||
+    normalized.includes("mah")||
+    normalized.includes("ma")||
+    normalized.includes("extension")||
+    normalized.includes("mx1")||
+    normalized.includes("mx2")||
+    normalized.includes("max1")||
+    normalized.includes("max2")||
+    /\bmat\b/.test(normalized)
+  )return"var(--cat-math)";
+
+  if(
+    normalized.includes("english")||
+    normalized.includes("enx")||
+    normalized.includes("ena")
+  )return"var(--cat-english)";
+
+  if(
+    normalized.includes("engineer")||
+    normalized.includes("software")||
+    normalized==="se"||
+    normalized.includes("-se-")||
+    normalized.includes("se")||
+    normalized.startsWith("se-")||
+    normalized.endsWith("-se")||
+    normalized.includes("technology")||
+    normalized.includes("textile")||
+    normalized.includes("graphics")||
+    normalized.includes("digital")||
+    normalized.includes("computing")||
+    normalized.includes("ict")||
+    normalized.includes("design")||
+    normalized.includes("engst")
+  )return"var(--cat-technology)";
+
   if(normalized.includes("mu"))return"var(--cat-music)";
-  if(normalized.includes("physics")||normalized.includes("phys")||normalized.includes("phy")||normalized.includes("chem")||normalized.includes("chm")||normalized.includes("biology")||normalized.includes("bio")||normalized.includes("science"))return"var(--cat-science)";
-  if(normalized.includes("history")||normalized.includes("geography")||normalized.includes("geo")||normalized.includes("business")||normalized.includes("legal")||normalized.includes("economics")||normalized.includes("commerce")||normalized.includes("society")||normalized.includes("hsie"))return"var(--cat-hsie)";
-  if(normalized.includes("french")||normalized.includes("japanese")||normalized.includes("jap")||normalized.includes("chinese")||normalized.includes("spanish")||normalized.includes("german")||normalized.includes("italian")||normalized.includes("korean")||normalized.includes("language")||normalized.includes("lote"))return"var(--cat-languages)";
-  if(normalized.includes("visual arts")||normalized.includes("visual-art")||normalized.includes("visualart")||normalized.includes("va")||normalized.includes("art"))return"var(--cat-va)";
+
+  if(
+    normalized.includes("physics")||
+    normalized.includes("phys")||
+    normalized.includes("phy")||
+    normalized.includes("chem")||
+    normalized.includes("chm")||
+    normalized.includes("biology")||
+    normalized.includes("bio")||
+    normalized.includes("science")
+  )return"var(--cat-science)";
+
+  if(
+    normalized.includes("history")||
+    normalized.includes("geography")||
+    normalized.includes("geo")||
+    normalized.includes("business")||
+    normalized.includes("legal")||
+    normalized.includes("economics")||
+    normalized.includes("commerce")||
+    normalized.includes("society")||
+    normalized.includes("hsie")
+  )return"var(--cat-hsie)";
+
+  if(
+    normalized.includes("french")||
+    normalized.includes("japanese")||
+    normalized.includes("jap")||
+    normalized.includes("chinese")||
+    normalized.includes("spanish")||
+    normalized.includes("german")||
+    normalized.includes("italian")||
+    normalized.includes("korean")||
+    normalized.includes("language")||
+    normalized.includes("lote")
+  )return"var(--cat-languages)";
+
+  if(
+    normalized.includes("visual arts")||
+    normalized.includes("visual-art")||
+    normalized.includes("visualart")||
+    normalized.includes("va")||
+    normalized.includes("art")
+  )return"var(--cat-va)";
 
   if(!subjectColorMap[normalized]){
-    const index=Object.keys(subjectColorMap).length%FALLBACK_COLORS.length;
+    const index=
+      Object.keys(subjectColorMap).length%
+      FALLBACK_COLORS.length;
+
     subjectColorMap[normalized]=FALLBACK_COLORS[index];
   }
+
   return subjectColorMap[normalized];
 }
 
 function findBellTime(bellTimes,dayName,period){
   if(!Array.isArray(bellTimes))return null;
 
-  const p=getPeriodNumber(period).toLowerCase(),d=String(dayName??"").trim().toLowerCase();
+  const p=getPeriodNumber(period).toLowerCase();
+  const d=String(dayName??"").trim().toLowerCase();
 
   let match=bellTimes.find(bt=>{
-    const bp=getPeriodNumber(bt.Period??bt.period??bt.PeriodNumber??bt.periodNumber??"").toLowerCase();
-    const bd=String(bt.DayName??bt.dayName??"").trim().toLowerCase();
+    const bp=getPeriodNumber(
+      bt.Period??
+      bt.period??
+      bt.PeriodNumber??
+      bt.periodNumber??
+      ""
+    ).toLowerCase();
+
+    const bd=String(
+      bt.DayName??
+      bt.dayName??
+      ""
+    ).trim().toLowerCase();
+
     return bp===p&&bd===d;
   });
 
-  if(!match)match=bellTimes.find(bt=>{
-    const bp=getPeriodNumber(bt.Period??bt.period??bt.PeriodNumber??bt.periodNumber??"").toLowerCase();
-    return !(bt.DayName||bt.dayName)&&bp===p;
-  });
+  if(!match){
+    match=bellTimes.find(bt=>{
+      const bp=getPeriodNumber(
+        bt.Period??
+        bt.period??
+        bt.PeriodNumber??
+        bt.periodNumber??
+        ""
+      ).toLowerCase();
 
-  if(!match)match=bellTimes.find(bt=>{
-    const bp=getPeriodNumber(bt.Period??bt.period??bt.PeriodNumber??bt.periodNumber??"").toLowerCase();
-    return bp===p;
-  });
+      return !(bt.DayName||bt.dayName)&&bp===p;
+    });
+  }
+
+  if(!match){
+    match=bellTimes.find(bt=>{
+      const bp=getPeriodNumber(
+        bt.Period??
+        bt.period??
+        bt.PeriodNumber??
+        bt.periodNumber??
+        ""
+      ).toLowerCase();
+
+      return bp===p;
+    });
+  }
 
   if(!match)return null;
 
   return{
-    start:match.StartTime??match.startTime??match.Start??match.start??match.BellStart??match.bellStart??null,
-    end:match.EndTime??match.endTime??match.End??match.end??match.BellEnd??match.bellEnd??null
+    start:
+      match.StartTime??
+      match.startTime??
+      match.Start??
+      match.start??
+      match.BellStart??
+      match.bellStart??
+      null,
+
+    end:
+      match.EndTime??
+      match.endTime??
+      match.End??
+      match.end??
+      match.BellEnd??
+      match.bellEnd??
+      null
   };
 }
 
 function classifyPeriod(value){
   const p=String(value??"").toLowerCase();
+
   if(p.includes("assembly"))return"assembly";
   if(p.includes("recess")||p==="break")return"break";
   if(p.includes("lunch"))return"lunch";
+
   return"class";
 }
 
 function getTeacher(raw){
-  const value=raw.TeacherName??raw.teacherName??raw.TeacherFullName??raw.teacherFullName??raw.Teacher??raw.teacher??raw.StaffName??raw.staffName??"";
+  const value=
+    raw.TeacherName??
+    raw.teacherName??
+    raw.TeacherFullName??
+    raw.teacherFullName??
+    raw.Teacher??
+    raw.teacher??
+    raw.StaffName??
+    raw.staffName??
+    "";
+
   if(!value)return"";
 
   if(typeof value==="string"&&value.includes("@")){
     const parts=value.split("@")[0].split(".");
-    if(parts.length>=2)return formatName(parts[0])+" "+formatName(parts[1].replace(/\d+$/,""));
-    return formatName(value.split("@")[0].replace(/\d+$/,""));
+
+    if(parts.length>=2){
+      return formatName(parts[0])+
+        " "+
+        formatName(parts[1].replace(/\d+$/,""));
+    }
+
+    return formatName(
+      value.split("@")[0].replace(/\d+$/,"")
+    );
   }
 
   return String(value).trim();
 }
 
 function getRoom(raw){
-  const value=raw.RoomNumber??raw.roomNumber??raw.RoomName??raw.roomName??raw.Room??raw.room??raw.Location??raw.location??raw.RoomCode??raw.roomCode??"";
+  const value=
+    raw.RoomNumber??
+    raw.roomNumber??
+    raw.RoomName??
+    raw.roomName??
+    raw.Room??
+    raw.room??
+    raw.Location??
+    raw.location??
+    raw.RoomCode??
+    raw.roomCode??
+    "";
+
   return value?String(value).trim():"";
 }
 
 function getSubject(raw){
-  return raw.SubjectName||raw.Subject||raw.subjectName||raw.subject||raw.Class||raw.class||"Class";
+  return raw.SubjectName||
+    raw.Subject||
+    raw.subjectName||
+    raw.subject||
+    raw.Class||
+    raw.class||
+    "Class";
 }
 
 function getCode(raw,subject){
-  return raw.ClassCode||raw.classCode||raw.Code||raw.code||raw.Class||raw.class||subject;
+  return raw.ClassCode||
+    raw.classCode||
+    raw.Code||
+    raw.code||
+    raw.Class||
+    raw.class||
+    subject;
 }
 
 function getRawTimes(raw,bellTimes,dayName,period){
-  const bt=findBellTime(bellTimes,dayName,period);
+  const bt=findBellTime(
+    bellTimes,
+    dayName,
+    period
+  );
+
   return{
-    start:bt?.start||raw.StartTime||raw.startTime||raw.Start||raw.start||null,
-    end:bt?.end||raw.EndTime||raw.endTime||raw.End||raw.end||null
+    start:
+      bt?.start||
+      raw.StartTime||
+      raw.startTime||
+      raw.Start||
+      raw.start||
+      null,
+
+    end:
+      bt?.end||
+      raw.EndTime||
+      raw.endTime||
+      raw.End||
+      raw.end||
+      null
   };
 }
 
 function normalizeTimetable(rawTimetable,bellTimes){
-  const grouped={A:{mon:[],tue:[],wed:[],thu:[],fri:[]},B:{mon:[],tue:[],wed:[],thu:[],fri:[]}};
+  const grouped={
+    A:{mon:[],tue:[],wed:[],thu:[],fri:[]},
+    B:{mon:[],tue:[],wed:[],thu:[],fri:[]}
+  };
+
   if(!Array.isArray(rawTimetable))return grouped;
 
   for(const raw of rawTimetable){
     const dayName=raw.DayName||raw.dayName;
+
     if(!dayName)continue;
 
-    const{dayKey,week}=dayNameToParts(dayName);
+    const {dayKey,week}=dayNameToParts(dayName);
+
     if(!grouped[week]||!grouped[week][dayKey])continue;
 
-    const period=raw.Period??raw.period,kind=classifyPeriod(period),times=getRawTimes(raw,bellTimes,dayName,period);
-    const subject=getSubject(raw),code=getCode(raw,subject);
+    const period=raw.Period??raw.period;
+    const kind=classifyPeriod(period);
+    const times=getRawTimes(
+      raw,
+      bellTimes,
+      dayName,
+      period
+    );
+
+    const subject=getSubject(raw);
+    const code=getCode(raw,subject);
 
     if(kind!=="class"){
-      grouped[week][dayKey].push({kind,start:times.start,end:times.end,raw});
+      grouped[week][dayKey].push({
+        kind,
+        start:times.start,
+        end:times.end,
+        raw
+      });
+
       continue;
     }
 
     grouped[week][dayKey].push({
-      kind:"class",code,periodNumber:getPeriodNumber(period),
-      subjKey:String(subject+" "+code).toLowerCase().replace(/[^a-z0-9]+/g,"-"),
-      subjName:subject,teacher:getTeacher(raw),room:getRoom(raw),
-      start:times.start,end:times.end,raw
+      kind:"class",
+      code,
+      periodNumber:getPeriodNumber(period),
+      subjKey:String(subject+" "+code)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g,"-"),
+      subjName:subject,
+      teacher:getTeacher(raw),
+      room:getRoom(raw),
+      start:times.start,
+      end:times.end,
+      raw
     });
   }
 
   for(const week of WEEK_ORDER){
     for(const day of DAY_ORDER){
-      const rows=grouped[week][day],isWednesday=day==="wed";
+      const rows=grouped[week][day];
+      const isWednesday=day==="wed";
+
       const breaks=isWednesday
-        ? [{kind:"assembly",start:"10:45",end:"11:05"},{kind:"break",start:"11:05",end:"11:25"},{kind:"lunch",start:"12:20",end:"13:00"}]
-        : [{kind:"break",start:"10:45",end:"11:05"},{kind:"lunch",start:"12:55",end:"13:35"}];
+        ?[
+          {kind:"assembly",start:"10:45",end:"11:05"},
+          {kind:"break",start:"11:05",end:"11:25"},
+          {kind:"lunch",start:"12:20",end:"13:00"}
+        ]
+        :[
+          {kind:"break",start:"10:45",end:"11:05"},
+          {kind:"lunch",start:"12:55",end:"13:35"}
+        ];
 
       for(const br of breaks){
-        const exists=rows.some(item=>item.start&&item.end&&timeToMin(item.start)===timeToMin(br.start)&&timeToMin(item.end)===timeToMin(br.end));
+        const exists=rows.some(item=>
+          item.start&&
+          item.end&&
+          timeToMin(item.start)===timeToMin(br.start)&&
+          timeToMin(item.end)===timeToMin(br.end)
+        );
+
         if(!exists)rows.push(br);
       }
 
@@ -565,7 +892,14 @@ function normalizeTimetable(rawTimetable,bellTimes){
 
         for(const item of rows){
           if(item.kind!=="class")continue;
-          const period=item.periodNumber||getPeriodNumber(item.raw?.Period??item.raw?.period);
+
+          const period=
+            item.periodNumber||
+            getPeriodNumber(
+              item.raw?.Period||
+              item.raw?.period
+            );
+
           if(wednesdayTimes[period]){
             item.start=wednesdayTimes[period].start;
             item.end=wednesdayTimes[period].end;
@@ -573,7 +907,11 @@ function normalizeTimetable(rawTimetable,bellTimes){
         }
       }
 
-      rows.sort((a,b)=>timeToMin(a.start)-timeToMin(b.start));
+      rows.sort(
+        (a,b)=>
+          timeToMin(a.start)-
+          timeToMin(b.start)
+      );
     }
   }
 
@@ -585,13 +923,26 @@ const statusBanner=document.getElementById("statusBanner");
 const refreshBtn=document.getElementById("refreshBtn");
 const updatedAtEl=document.getElementById("updatedAt");
 
-let SCHEDULE={A:{mon:[],tue:[],wed:[],thu:[],fri:[]},B:{mon:[],tue:[],wed:[],thu:[],fri:[]}};
-let TODAY_CYCLE_DAY=null,currentWeek="A",seqIndex=0;
+let SCHEDULE={
+  A:{mon:[],tue:[],wed:[],thu:[],fri:[]},
+  B:{mon:[],tue:[],wed:[],thu:[],fri:[]}
+};
+
+let TODAY_CYCLE_DAY=null;
+let currentWeek="A";
+let seqIndex=0;
 
 function setStatus(message,isError=false){
-  if(!message){statusBanner.style.display="none";return}
+  if(!message){
+    statusBanner.style.display="none";
+    return;
+  }
+
   statusBanner.style.display="block";
-  statusBanner.className="statusBanner"+(isError?" error":"");
+  statusBanner.className=
+    "statusBanner"+
+    (isError?" error":"");
+
   statusBanner.textContent=message;
 }
 
@@ -599,69 +950,151 @@ const DEFAULT_TIMELINE_START=7*60+55;
 const NO_PERIOD_0_START=8*60+55;
 const TIMELINE_END=14*60+50;
 const TIMELINE_HEIGHT=610;
+
 let TIMELINE_START=DEFAULT_TIMELINE_START;
 
 function hasPeriodZero(){
   const week=SCHEDULE[currentWeek];
+
   if(!week)return false;
-  return DAY_ORDER.some(day=>(week[day]||[]).some(item=>item.kind==="class"&&String(item.periodNumber)==="0"));
+
+  return DAY_ORDER.some(day=>
+    (week[day]||[]).some(item=>
+      item.kind==="class"&&
+      String(item.periodNumber)==="0"
+    )
+  );
 }
 
 function hasPeriodZeroForDay(week,day){
-  return(SCHEDULE[week]?.[day]||[]).some(item=>item.kind==="class"&&String(item.periodNumber)==="0");
+  return(SCHEDULE[week]?.[day]||[])
+    .some(item=>
+      item.kind==="class"&&
+      String(item.periodNumber)==="0"
+    );
 }
 
 function timelineTop(time,timelineStart){
-  const base=timelineStart!==undefined?timelineStart:TIMELINE_START;
-  return(timeToMin(time)-base)/(TIMELINE_END-base)*TIMELINE_HEIGHT;
+  const base=
+    timelineStart!==undefined?
+    timelineStart:
+    TIMELINE_START;
+
+  return(
+    (timeToMin(time)-base)/
+    (TIMELINE_END-base)*
+    TIMELINE_HEIGHT
+  );
 }
 
 function timelineHeight(start,end,timelineStart){
-  const base=timelineStart!==undefined?timelineStart:TIMELINE_START;
-  return(timeToMin(end)-timeToMin(start))/(TIMELINE_END-base)*TIMELINE_HEIGHT;
+  const base=
+    timelineStart!==undefined?
+    timelineStart:
+    TIMELINE_START;
+
+  return(
+    (timeToMin(end)-timeToMin(start))/
+    (TIMELINE_END-base)*
+    TIMELINE_HEIGHT
+  );
 }
 
 function isToday(week,dayKey){
   if(!TODAY_CYCLE_DAY)return false;
-  return TODAY_CYCLE_DAY===dayKey.charAt(0).toUpperCase()+dayKey.slice(1)+week;
+
+  return TODAY_CYCLE_DAY===
+    dayKey.charAt(0).toUpperCase()+
+    dayKey.slice(1)+
+    week;
 }
 
 function isNowActive(week,dayKey,start,end){
   if(!isToday(week,dayKey)||!start||!end)return false;
-  const now=new Date(),cur=now.getHours()*60+now.getMinutes();
-  return cur>=timeToMin(start)&&cur<timeToMin(end);
+
+  const now=new Date();
+  const cur=
+    now.getHours()*60+
+    now.getMinutes();
+
+  return(
+    cur>=timeToMin(start)&&
+    cur<timeToMin(end)
+  );
 }
 
 function build(){
   grid.innerHTML="";
-  TIMELINE_START=hasPeriodZero()?DEFAULT_TIMELINE_START:NO_PERIOD_0_START;
+
+  TIMELINE_START=
+    hasPeriodZero()?
+    DEFAULT_TIMELINE_START:
+    NO_PERIOD_0_START;
 
   const mobileDay=DAY_ORDER[seqIndex%5];
-  const mobileWeek=WEEK_ORDER[Math.floor(seqIndex/5)];
-  const isMobileView=window.matchMedia("(max-width:760px)").matches;
+
+  const mobileWeek=
+    WEEK_ORDER[
+      Math.floor(seqIndex/5)
+    ];
+
+  const isMobileView=
+    window.matchMedia(
+      "(max-width:760px)"
+    ).matches;
 
   const corner=document.createElement("div");
+
   corner.className="corner-cell";
   grid.appendChild(corner);
 
   DAY_ORDER.forEach(day=>{
     const head=document.createElement("div");
-    head.className="head"+(isToday(currentWeek,day)?" today":"")+(day===mobileDay?" mobile-active":"");
-    head.innerHTML=`${DAY_LABELS[day]}<small>Week ${currentWeek}</small>`;
+
+    head.className=
+      "head"+
+      (isToday(currentWeek,day)?" today":"")+
+      (day===mobileDay?" mobile-active":"");
+
+    head.innerHTML=
+      `${DAY_LABELS[day]}<small>Week ${currentWeek}</small>`;
+
     grid.appendChild(head);
   });
 
-  const timeColumn=document.createElement("div");
+  const timeColumn=
+    document.createElement("div");
+
   timeColumn.className="time-column";
 
-  const labels=["07:55","08:55","09:50","10:45","11:05","11:25","12:20","12:55","13:00","13:35","13:55","14:50"];
+  const labels=[
+    "07:55",
+    "08:55",
+    "09:50",
+    "10:45",
+    "11:05",
+    "11:25",
+    "12:20",
+    "12:55",
+    "13:00",
+    "13:35",
+    "13:55",
+    "14:50"
+  ];
 
   [...new Set(labels)].forEach(time=>{
-    if(timeToMin(time)<TIMELINE_START||timeToMin(time)>TIMELINE_END)return;
+    if(
+      timeToMin(time)<TIMELINE_START||
+      timeToMin(time)>TIMELINE_END
+    )return;
+
     const label=document.createElement("div");
+
     label.className="time-label";
-    label.style.top=`${timelineTop(time)}px`;
+    label.style.top=
+      `${timelineTop(time)}px`;
     label.textContent=time;
+
     timeColumn.appendChild(label);
   });
 
@@ -669,67 +1102,133 @@ function build(){
 
   DAY_ORDER.forEach(day=>{
     const column=document.createElement("div");
+
     column.className="day-column";
     column.dataset.day=day;
-    column.dataset.active=day===mobileDay?"1":"0";
+    column.dataset.active=
+      day===mobileDay?"1":"0";
 
-    const rows=SCHEDULE[currentWeek]?.[day]||[];
-    const dayTimelineStart=isMobileView&&day===mobileDay
-      ?hasPeriodZeroForDay(currentWeek,day)?DEFAULT_TIMELINE_START:NO_PERIOD_0_START
-      :TIMELINE_START;
+    const rows=
+      SCHEDULE[currentWeek]?.[day]||[];
+
+    const dayTimelineStart=
+      isMobileView&&day===mobileDay
+        ?hasPeriodZeroForDay(
+          currentWeek,
+          day
+        )
+          ?DEFAULT_TIMELINE_START
+          :NO_PERIOD_0_START
+        :TIMELINE_START;
 
     rows.forEach(item=>{
       if(!item.start||!item.end)return;
 
-      const start=timeToMin(item.start),end=timeToMin(item.end);
+      const start=timeToMin(item.start);
+      const end=timeToMin(item.end);
+
       if(end<=start)return;
 
-      const top=timelineTop(item.start,dayTimelineStart);
-      const height=timelineHeight(item.start,item.end,dayTimelineStart);
+      const top=
+        timelineTop(
+          item.start,
+          dayTimelineStart
+        );
+
+      const height=
+        timelineHeight(
+          item.start,
+          item.end,
+          dayTimelineStart
+        );
+
       const VERTICAL_GAP=8;
-      const finalTop=top+VERTICAL_GAP/2;
-      const finalHeight=Math.max(height-VERTICAL_GAP,20);
+
+      const finalTop=
+        top+
+        VERTICAL_GAP/2;
+
+      const finalHeight=
+        Math.max(
+          height-VERTICAL_GAP,
+          20
+        );
 
       if(item.kind!=="class"){
-        const breakCard=document.createElement("div");
+        const breakCard=
+          document.createElement("div");
+
         breakCard.className="break-card";
-        breakCard.style.top=`${finalTop}px`;
-        breakCard.style.height=`${finalHeight}px`;
+
+        breakCard.style.top=
+          `${finalTop}px`;
+
+        breakCard.style.height=
+          `${finalHeight}px`;
 
         let label="Break";
+
         if(item.kind==="lunch")label="Lunch";
         if(item.kind==="break")label="Recess";
         if(item.kind==="assembly")label="Assembly";
 
-        breakCard.innerHTML=`<span class="tag">${label}</span>`;
+        breakCard.innerHTML=
+          `<span class="tag">${label}</span>`;
+
         column.appendChild(breakCard);
         return;
       }
 
       const card=document.createElement("div");
-      card.className="cls";
-      card.style.top=`${finalTop}px`;
-      card.style.height=`${finalHeight}px`;
-      card.style.setProperty("--c",colorForSubject(item.subjKey));
 
-      if(isNowActive(currentWeek,day,item.start,item.end))card.classList.add("now");
+      card.className="cls";
+
+      card.style.top=
+        `${finalTop}px`;
+
+      card.style.height=
+        `${finalHeight}px`;
+
+      card.style.setProperty(
+        "--c",
+        colorForSubject(item.subjKey)
+      );
+
+      if(
+        isNowActive(
+          currentWeek,
+          day,
+          item.start,
+          item.end
+        )
+      ){
+        card.classList.add("now");
+      }
 
       const code=document.createElement("div");
+
       code.className="code";
       code.textContent=item.code||"";
+
       card.appendChild(code);
 
       if(item.teacher){
-        const teacher=document.createElement("div");
+        const teacher=
+          document.createElement("div");
+
         teacher.className="teacher";
         teacher.textContent=item.teacher;
+
         card.appendChild(teacher);
       }
 
       if(item.room){
-        const room=document.createElement("div");
+        const room=
+          document.createElement("div");
+
         room.className="room";
         room.textContent=item.room;
+
         card.appendChild(room);
       }
 
@@ -739,16 +1238,33 @@ function build(){
     grid.appendChild(column);
   });
 
-  document.getElementById("weekLabel").textContent=`Week ${currentWeek}`;
+  document.getElementById("weekLabel")
+    .textContent=`Week ${currentWeek}`;
 
-  const dayLabelEl=document.getElementById("dayLabel");
-  dayLabelEl.textContent=DAY_LABELS[mobileDay];
-  dayLabelEl.classList.toggle("today",isToday(mobileWeek,mobileDay));
-  document.getElementById("dayWeekLabel").textContent=`Week ${mobileWeek}`;
+  const dayLabelEl=
+    document.getElementById("dayLabel");
+
+  dayLabelEl.textContent=
+    DAY_LABELS[mobileDay];
+
+  dayLabelEl.classList.toggle(
+    "today",
+    isToday(
+      mobileWeek,
+      mobileDay
+    )
+  );
+
+  document.getElementById("dayWeekLabel")
+    .textContent=`Week ${mobileWeek}`;
 }
 
 function updateBell(){
-  const line1=document.getElementById("bellLine1"),line2=document.getElementById("bellLine2");
+  const line1=
+    document.getElementById("bellLine1");
+
+  const line2=
+    document.getElementById("bellLine2");
 
   if(!TODAY_CYCLE_DAY){
     line1.textContent="No school today";
@@ -756,133 +1272,289 @@ function updateBell(){
     return;
   }
 
-  const{dayKey,week}=dayNameToParts(TODAY_CYCLE_DAY);
-  const now=new Date(),cur=now.getHours()*60+now.getMinutes();
-  const rows=SCHEDULE[week]?.[dayKey]||[];
-  let current=null,next=null;
+  const {dayKey,week}=
+    dayNameToParts(TODAY_CYCLE_DAY);
+
+  const now=new Date();
+
+  const cur=
+    now.getHours()*60+
+    now.getMinutes();
+
+  const rows=
+    SCHEDULE[week]?.[dayKey]||[];
+
+  let current=null;
+  let next=null;
 
   for(const item of rows){
     if(!item.start||!item.end)continue;
 
-    const s=timeToMin(item.start),e=timeToMin(item.end);
+    const s=timeToMin(item.start);
+    const e=timeToMin(item.end);
 
     if(cur>=s&&cur<e){
-      if(item.kind==="class")current=item;
+      if(item.kind==="class"){
+        current=item;
+      }
+
       break;
     }
 
-    if(cur<s&&!next&&item.kind==="class")next=item;
+    if(
+      cur<s&&
+      !next&&
+      item.kind==="class"
+    ){
+      next=item;
+    }
   }
 
   if(current){
-    line1.textContent=`${current.code} — ${current.subjName}`;
-    line2.textContent=`until ${formatTime(current.end)}${current.room?` · ${current.room}`:""}`;
+    line1.textContent=
+      `${current.code} — ${current.subjName}`;
+
+    line2.textContent=
+      `until ${formatTime(current.end)}`+
+      `${current.room?` · ${current.room}`:""}`;
+
     return;
   }
 
   if(next){
-    line1.textContent=`Next: ${next.code}`;
-    line2.textContent=`from ${formatTime(next.start)}${next.room?` · ${next.room}`:""}`;
+    line1.textContent=
+      `Next: ${next.code}`;
+
+    line2.textContent=
+      `from ${formatTime(next.start)}`+
+      `${next.room?` · ${next.room}`:""}`;
+
     return;
   }
 
-  line1.textContent="No more classes today";
-  line2.textContent=DAY_LABELS[dayKey];
+  line1.textContent=
+    "No more classes today";
+
+  line2.textContent=
+    DAY_LABELS[dayKey];
 }
 
 async function refresh(force=false){
   refreshBtn.disabled=true;
-  setStatus(force?"Refreshing timetable…":"Loading timetable…");
+
+  setStatus(
+    force?
+      "Refreshing timetable…":
+      "Loading timetable…"
+  );
 
   const currentEmail=getCurrentEmail();
+
   updateProfileDisplay(currentEmail);
 
   try{
-    const{timetable,bellTimes,startDate,profile,fetchedAt}=await timetableService.loadAll(force);
-    const cycleStart=extractDateString(startDate);
-    const cycleStartDate=cycleStart?new Date(cycleStart):null;
+    const {
+      timetable,
+      bellTimes,
+      startDate,
+      profile,
+      fetchedAt
+    }=await timetableService.loadAll(force);
 
-    TODAY_CYCLE_DAY=cycleStartDate?getTimetableDay(new Date(),cycleStartDate):null;
+    const cycleStart=
+      extractDateString(startDate);
+
+    const cycleStartDate=
+      cycleStart?
+        new Date(cycleStart):
+        null;
+
+    TODAY_CYCLE_DAY=
+      cycleStartDate?
+        getTimetableDay(
+          new Date(),
+          cycleStartDate
+        ):
+        null;
 
     if(TODAY_CYCLE_DAY){
-      currentWeek=TODAY_CYCLE_DAY.slice(-1);
-      const dayIdx=DAY_ORDER.indexOf(TODAY_CYCLE_DAY.slice(0,3).toLowerCase());
-      seqIndex=WEEK_ORDER.indexOf(currentWeek)*5+(dayIdx>=0?dayIdx:0);
+      currentWeek=
+        TODAY_CYCLE_DAY.slice(-1);
+
+      const dayIdx=
+        DAY_ORDER.indexOf(
+          TODAY_CYCLE_DAY
+            .slice(0,3)
+            .toLowerCase()
+        );
+
+      seqIndex=
+        WEEK_ORDER.indexOf(currentWeek)*5+
+        (dayIdx>=0?dayIdx:0);
     }
 
-    SCHEDULE=normalizeTimetable(timetable,bellTimes);
-    updateProfileDisplay(currentEmail,profile);
+    SCHEDULE=
+      normalizeTimetable(
+        timetable,
+        bellTimes
+      );
+
+    updateProfileDisplay(
+      currentEmail,
+      profile
+    );
+
     setStatus(null);
 
     if(fetchedAt){
-      updatedAtEl.textContent=`Updated ${fetchedAt.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
+      updatedAtEl.textContent=
+        `Updated ${fetchedAt.toLocaleTimeString(
+          [],
+          {
+            hour:"2-digit",
+            minute:"2-digit"
+          }
+        )}`;
     }
 
     build();
     updateBell();
+
   }catch(err){
-    const message=err instanceof ApiError
-      ?`Unable to load timetable. ${err.message}`
-      :"Unable to load timetable. An unexpected error occurred.";
+    const message=
+      err instanceof ApiError
+        ?`Unable to load timetable. ${err.message}`
+        :"Unable to load timetable. An unexpected error occurred.";
 
     setStatus(message,true);
-    console.error("Timetable load failed:",err);
+
+    console.error(
+      "Timetable load failed:",
+      err
+    );
+
   }finally{
     refreshBtn.disabled=false;
   }
 }
 
-const emailInput=document.getElementById("emailInput");
-const savedUsername=localStorage.getItem("timetable-username");
+const emailInput=
+  document.getElementById("emailInput");
 
-emailInput.value=savedUsername||CONFIG.USER_EMAIL.split("@")[0];
+const savedUsername=
+  localStorage.getItem(
+    "timetable-username"
+  );
 
-emailInput.addEventListener("input",event=>{
-  const username=event.target.value.trim();
-  updateProfileDisplay(username?username+"@education.nsw.gov.au":CONFIG.USER_EMAIL);
-});
+emailInput.value=
+  savedUsername||
+  CONFIG.USER_EMAIL.split("@")[0];
+
+emailInput.addEventListener(
+  "input",
+  event=>{
+    const username=
+      event.target.value.trim();
+
+    updateProfileDisplay(
+      username?
+        username+"@education.nsw.gov.au":
+        CONFIG.USER_EMAIL
+    );
+  }
+);
 
 function submitEmail(){
-  let username=emailInput.value.trim();
+  let username=
+    emailInput.value.trim();
+
   if(!username)return;
-  if(username.includes("@"))username=username.split("@")[0];
-  CONFIG.USER_EMAIL=username+"@education.nsw.gov.au";
-  localStorage.setItem("timetable-username",username);
+
+  if(username.includes("@")){
+    username=username.split("@")[0];
+  }
+
+  CONFIG.USER_EMAIL=
+    username+"@education.nsw.gov.au";
+
+  localStorage.setItem(
+    "timetable-username",
+    username
+  );
+
   refresh(true);
 }
 
-emailInput.addEventListener("change",submitEmail);
-emailInput.addEventListener("keydown",event=>{
-  if(event.key!=="Enter")return;
-  event.preventDefault();
-  submitEmail();
-});
+emailInput.addEventListener(
+  "change",
+  submitEmail
+);
 
-refreshBtn.addEventListener("click",()=>refresh(true));
+emailInput.addEventListener(
+  "keydown",
+  event=>{
+    if(event.key!=="Enter")return;
 
-document.getElementById("weekPrev").addEventListener("click",()=>{
-  currentWeek=currentWeek==="A"?"B":"A";
-  seqIndex=WEEK_ORDER.indexOf(currentWeek)*5+(seqIndex%5);
-  build();
-});
+    event.preventDefault();
+    submitEmail();
+  }
+);
 
-document.getElementById("weekNext").addEventListener("click",()=>{
-  currentWeek=currentWeek==="A"?"B":"A";
-  seqIndex=WEEK_ORDER.indexOf(currentWeek)*5+(seqIndex%5);
-  build();
-});
+refreshBtn.addEventListener(
+  "click",
+  ()=>refresh(true)
+);
 
-document.getElementById("dayPrev").addEventListener("click",()=>{
-  seqIndex=(seqIndex+9)%10;
-  currentWeek=WEEK_ORDER[Math.floor(seqIndex/5)];
-  build();
-});
+document.getElementById("weekPrev")
+  .addEventListener("click",()=>{
+    currentWeek=
+      currentWeek==="A"?"B":"A";
 
-document.getElementById("dayNext").addEventListener("click",()=>{
-  seqIndex=(seqIndex+1)%10;
-  currentWeek=WEEK_ORDER[Math.floor(seqIndex/5)];
-  build();
-});
+    seqIndex=
+      WEEK_ORDER.indexOf(currentWeek)*5+
+      (seqIndex%5);
+
+    build();
+  });
+
+document.getElementById("weekNext")
+  .addEventListener("click",()=>{
+    currentWeek=
+      currentWeek==="A"?"B":"A";
+
+    seqIndex=
+      WEEK_ORDER.indexOf(currentWeek)*5+
+      (seqIndex%5);
+
+    build();
+  });
+
+document.getElementById("dayPrev")
+  .addEventListener("click",()=>{
+    seqIndex=(seqIndex+9)%10;
+
+    currentWeek=
+      WEEK_ORDER[
+        Math.floor(seqIndex/5)
+      ];
+
+    build();
+  });
+
+document.getElementById("dayNext")
+  .addEventListener(
+    "click",
+    ()=>{
+      seqIndex=(seqIndex+1)%10;
+
+      currentWeek=
+        WEEK_ORDER[
+          Math.floor(seqIndex/5)
+        ];
+
+      build();
+    }
+  );
 
 refresh(false);
 
@@ -891,62 +1563,169 @@ setInterval(()=>{
   build();
 },60000);
 
-const themeSwitch=document.getElementById("themeSwitch");
-const mq=window.matchMedia("(prefers-color-scheme: dark)");
+const themeSwitch=
+  document.getElementById(
+    "themeSwitch"
+  );
+
+const mq=
+  window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
 
 function applyTheme(theme){
-  document.documentElement.dataset.theme=theme;
+  document.documentElement.dataset.theme=
+    theme;
+
   const isDark=theme==="dark";
-  themeSwitch.classList.toggle("on",isDark);
-  themeSwitch.setAttribute("aria-checked",String(isDark));
+
+  themeSwitch.classList.toggle(
+    "on",
+    isDark
+  );
+
+  themeSwitch.setAttribute(
+    "aria-checked",
+    String(isDark)
+  );
 }
 
-const stored=localStorage.getItem("timetable-theme");
+const stored=
+  localStorage.getItem(
+    "timetable-theme"
+  );
+
 applyTheme(stored||"light");
 
-mq.addEventListener("change",event=>{
-  if(!localStorage.getItem("timetable-theme"))applyTheme(event.matches?"dark":"light");
-});
+mq.addEventListener(
+  "change",
+  event=>{
+    if(
+      !localStorage.getItem(
+        "timetable-theme"
+      )
+    ){
+      applyTheme(
+        event.matches?
+          "dark":
+          "light"
+      );
+    }
+  }
+);
 
-themeSwitch.addEventListener("click",()=>{
-  const next=document.documentElement.dataset.theme==="dark"?"light":"dark";
-  localStorage.setItem("timetable-theme",next);
-  applyTheme(next);
-});
+themeSwitch.addEventListener(
+  "click",
+  ()=>{
+    const next=
+      document.documentElement
+        .dataset.theme==="dark"
+        ?"light"
+        :"dark";
 
-const outlineSwitch=document.getElementById("outlineSwitch");
-const OUTLINE_STORAGE_KEY="timetable-outline-colors";
-let outlineByColor=localStorage.getItem(OUTLINE_STORAGE_KEY)!=="0";
+    localStorage.setItem(
+      "timetable-theme",
+      next
+    );
+
+    applyTheme(next);
+  }
+);
+
+const outlineSwitch=
+  document.getElementById(
+    "outlineSwitch"
+  );
+
+const OUTLINE_STORAGE_KEY=
+  "timetable-outline-colors";
+
+let outlineByColor=
+  localStorage.getItem(
+    OUTLINE_STORAGE_KEY
+  )!=="0";
 
 function applyOutlineSetting(){
-  grid.dataset.outlineColors=outlineByColor?"1":"0";
-  outlineSwitch.classList.toggle("on",outlineByColor);
-  outlineSwitch.setAttribute("aria-checked",String(outlineByColor));
+  grid.dataset.outlineColors=
+    outlineByColor?"1":"0";
+
+  outlineSwitch.classList.toggle(
+    "on",
+    outlineByColor
+  );
+
+  outlineSwitch.setAttribute(
+    "aria-checked",
+    String(outlineByColor)
+  );
 }
 
 applyOutlineSetting();
 
-outlineSwitch.addEventListener("click",()=>{
-  outlineByColor=!outlineByColor;
-  localStorage.setItem(OUTLINE_STORAGE_KEY,outlineByColor?"1":"0");
-  applyOutlineSetting();
-});
+outlineSwitch.addEventListener(
+  "click",
+  ()=>{
+    outlineByColor=!outlineByColor;
 
-const infoBtn=document.getElementById("infoToggle");
-const infoOverlay=document.getElementById("infoOverlay");
-const infoClose=document.getElementById("infoClose");
-const infoTextarea=document.getElementById("infoTextarea");
-const infoClear=document.getElementById("infoClear");
-const infoSaved=document.getElementById("infoSaved");
-const INFO_STORAGE_KEY="timetable-extra-information";
+    localStorage.setItem(
+      OUTLINE_STORAGE_KEY,
+      outlineByColor?"1":"0"
+    );
 
-const savedInfo=localStorage.getItem(INFO_STORAGE_KEY);
-if(savedInfo!==null)infoTextarea.value=savedInfo;
+    applyOutlineSetting();
+  }
+);
+
+const infoBtn=
+  document.getElementById(
+    "infoToggle"
+  );
+
+const infoOverlay=
+  document.getElementById(
+    "infoOverlay"
+  );
+
+const infoClose=
+  document.getElementById(
+    "infoClose"
+  );
+
+const infoTextarea=
+  document.getElementById(
+    "infoTextarea"
+  );
+
+const infoClear=
+  document.getElementById(
+    "infoClear"
+  );
+
+const infoSaved=
+  document.getElementById(
+    "infoSaved"
+  );
+
+const INFO_STORAGE_KEY=
+  "timetable-extra-information";
+
+const savedInfo=
+  localStorage.getItem(
+    INFO_STORAGE_KEY
+  );
+
+if(savedInfo!==null){
+  infoTextarea.value=savedInfo;
+}
 
 function openInfoPopup(){
   infoOverlay.classList.add("open");
   document.body.style.overflow="hidden";
-  setTimeout(()=>infoTextarea.focus(),150);
+
+  setTimeout(
+    ()=>infoTextarea.focus(),
+    150
+  );
 }
 
 function closeInfoPopup(){
@@ -954,28 +1733,64 @@ function closeInfoPopup(){
   document.body.style.overflow="";
 }
 
-infoBtn.addEventListener("click",openInfoPopup);
-infoClose.addEventListener("click",closeInfoPopup);
+infoBtn.addEventListener(
+  "click",
+  openInfoPopup
+);
 
-infoOverlay.addEventListener("click",event=>{
-  if(event.target===infoOverlay)closeInfoPopup();
-});
+infoClose.addEventListener(
+  "click",
+  closeInfoPopup
+);
 
-document.addEventListener("keydown",event=>{
-  if(event.key==="Escape"&&infoOverlay.classList.contains("open"))closeInfoPopup();
-});
+infoOverlay.addEventListener(
+  "click",
+  event=>{
+    if(event.target===infoOverlay){
+      closeInfoPopup();
+    }
+  }
+);
 
-infoTextarea.addEventListener("input",()=>{
-  localStorage.setItem(INFO_STORAGE_KEY,infoTextarea.value);
-  infoSaved.textContent="Saved automatically";
-});
+document.addEventListener(
+  "keydown",
+  event=>{
+    if(
+      event.key==="Escape"&&
+      infoOverlay.classList.contains("open")
+    ){
+      closeInfoPopup();
+    }
+  }
+);
 
-infoClear.addEventListener("click",()=>{
-  if(!confirm("Clear all information?"))return;
-  infoTextarea.value="";
-  localStorage.removeItem(INFO_STORAGE_KEY);
-  infoSaved.textContent="Cleared";
-});
+infoTextarea.addEventListener(
+  "input",
+  ()=>{
+    localStorage.setItem(
+      INFO_STORAGE_KEY,
+      infoTextarea.value
+    );
+
+    infoSaved.textContent=
+      "Saved automatically";
+  }
+);
+
+infoClear.addEventListener(
+  "click",
+  ()=>{
+    if(!confirm("Clear all information?"))return;
+
+    infoTextarea.value="";
+
+    localStorage.removeItem(
+      INFO_STORAGE_KEY
+    );
+
+    infoSaved.textContent="Cleared";
+  }
+);
 </script>
 </body>
 </html>
