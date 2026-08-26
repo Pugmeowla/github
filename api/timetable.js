@@ -13,6 +13,14 @@ export default async function handler(req, res) {
     });
   }
 
+  // Ideally restrict this to accounts you're authorised to access.
+  // For example, during testing:
+  if (email.toLowerCase() !== process.env.SCHOOL_EMAIL.toLowerCase()) {
+    return res.status(403).json({
+      error: "This timetable is not available."
+    });
+  }
+
   const emailAddress = process.env.SCHOOL_EMAIL;
   const password = process.env.SCHOOL_PASSWORD;
   const apiBase = process.env.SCHOOL_API_BASE;
@@ -26,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Get a fresh token from the school API
+    // 1. Get a fresh JWT
     const tokenResponse = await fetch(`${apiBase}/token`, {
       method: "POST",
       headers: {
@@ -58,17 +66,32 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Request the timetable using the fresh token
-    const timetableResponse = await fetch(
-      `${apiBase}/timetable/${encodeURIComponent(email)}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json"
-        }
-      }
-    );
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json"
+    };
+
+    // 2. Get all required data server-side
+    const [
+      timetableResponse,
+      bellTimesResponse,
+      startDateResponse,
+      profileResponse
+    ] = await Promise.all([
+      fetch(
+        `${apiBase}/timetable/${encodeURIComponent(email)}`,
+        { headers }
+      ),
+
+      fetch(`${apiBase}/timetable/bell-times`, { headers }),
+
+      fetch(`${apiBase}/timetable/settings/start-date`, { headers }),
+
+      fetch(
+        `${apiBase}/user/${encodeURIComponent(email)}`,
+        { headers }
+      )
+    ]);
 
     if (!timetableResponse.ok) {
       const details = await timetableResponse.text();
@@ -85,7 +108,25 @@ export default async function handler(req, res) {
 
     const timetable = await timetableResponse.json();
 
-    return res.status(200).json(timetable);
+    const bellTimes = bellTimesResponse.ok
+      ? await bellTimesResponse.json()
+      : null;
+
+    const startDate = startDateResponse.ok
+      ? await startDateResponse.json()
+      : null;
+
+    const profile = profileResponse.ok
+      ? await profileResponse.json()
+      : null;
+
+    // 3. Send clean data to browser
+    return res.status(200).json({
+      timetable,
+      bellTimes,
+      startDate,
+      profile
+    });
 
   } catch (error) {
     console.error(
