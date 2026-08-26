@@ -13,17 +13,20 @@ export default async function handler(req, res) {
     });
   }
 
-  const schoolEmail = process.env.SCHOOL_EMAIL;
+  const emailAddress = process.env.SCHOOL_EMAIL;
   const password = process.env.SCHOOL_PASSWORD;
   const apiBase = process.env.SCHOOL_API_BASE;
 
-  if (!schoolEmail || !password || !apiBase) {
+  if (!emailAddress || !password || !apiBase) {
+    console.error("Required environment variables are missing.");
+
     return res.status(500).json({
       error: "Server authentication is not configured."
     });
   }
 
   try {
+    // 1. Get a fresh token from the school API
     const tokenResponse = await fetch(`${apiBase}/token`, {
       method: "POST",
       headers: {
@@ -31,42 +34,64 @@ export default async function handler(req, res) {
         "Accept": "application/json"
       },
       body: JSON.stringify({
-        emailAddress: schoolEmail,
+        emailAddress,
         password
       })
     });
 
-    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+      console.error(
+        `School authentication returned HTTP ${tokenResponse.status}`
+      );
 
-    if (!tokenResponse.ok || !tokenData?.token) {
       return res.status(502).json({
         error: "School authentication failed."
       });
     }
 
+    const tokenData = await tokenResponse.json();
+    const token = tokenData?.token;
+
+    if (!token) {
+      return res.status(502).json({
+        error: "School API did not return a token."
+      });
+    }
+
+    // 2. Request the timetable using the fresh token
     const timetableResponse = await fetch(
-      `${apiBase}/api/timetable/${encodeURIComponent(email)}`,
+      `${apiBase}/timetable/${encodeURIComponent(email)}`,
       {
+        method: "GET",
         headers: {
-          "Authorization": `Bearer ${tokenData.token}`,
-          "Accept": "application/json"
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
         }
       }
     );
 
-    const timetableData = await timetableResponse.json();
-
     if (!timetableResponse.ok) {
+      const details = await timetableResponse.text();
+
+      console.error(
+        `Timetable API returned HTTP ${timetableResponse.status}:`,
+        details
+      );
+
       return res.status(timetableResponse.status).json({
-        error: "Unable to retrieve timetable.",
-        details: timetableData
+        error: "Unable to retrieve timetable."
       });
     }
 
-    return res.status(200).json(timetableData);
+    const timetable = await timetableResponse.json();
+
+    return res.status(200).json(timetable);
 
   } catch (error) {
-    console.error(error);
+    console.error(
+      "Timetable request error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
 
     return res.status(502).json({
       error: "Unable to contact the school API."
