@@ -67,11 +67,10 @@ export default async function handler(req, res) {
       console.error("Unable to decode JWT expiration.");
     }
 
-    return res.status(200).json({
-      success: true,
-      authenticated: true,
-      expiresAt
-    });
+return res.status(200).json({
+  token,
+  type: "Bearer"
+});
 
   } catch (error) {
     console.error(
