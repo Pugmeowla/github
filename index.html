@@ -1090,6 +1090,41 @@ h1 {
   transform: scale(.96);
 }
 
+.infoRepoLink {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+
+  padding: 7px 11px;
+
+  background: var(--glass);
+  color: var(--accent);
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+  text-decoration: none;
+
+  transition:
+    background .2s ease,
+    transform .2s ease;
+}
+
+.infoRepoLink:hover {
+  background: var(--glass-hi);
+}
+
+.infoRepoLink:active {
+  transform: scale(.96);
+}
+
+.infoFooterActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @media(max-width:760px) {
 
   .header-buttons {
@@ -1188,10 +1223,6 @@ h1 {
     display: none;
   }
 
-  .grid .head.mobile-active {
-    display: block;
-  }
-
   .grid > .time-column {
     display: none;
   }
@@ -1208,6 +1239,27 @@ h1 {
     max-width: 420px;
     margin: 0 auto;
     width: 100%;
+  }
+
+  .daySwitch .day.today {
+    color: var(--accent);
+  }
+
+  .daySwitch .day.today::after {
+    content: "";
+
+    display: inline-block;
+
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: var(--accent);
+
+    margin-left: 6px;
+
+    vertical-align: middle;
   }
 }
 </style>
@@ -1412,13 +1464,26 @@ If anything breaks or if you have any suggestions for me to add, please contanct
 
         </span>
 
-        <button
-          class="infoClear"
-          id="infoClear"
-          type="button"
-        >
-          Clear
-        </button>
+        <div class="infoFooterActions">
+          <a
+            class="infoRepoLink"
+            id="infoRepoLink"
+            href="https://github.com/Pugmeowla/timetable"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View source and README on GitHub"
+          >
+            Github
+          </a>
+
+          <button
+            class="infoClear"
+            id="infoClear"
+            type="button"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
     </div>
@@ -3486,10 +3551,16 @@ card.style.height =
     `Week ${currentWeek}`;
 
 
-  document.getElementById(
-    "dayLabel"
-  ).textContent =
+  const dayLabelEl =
+    document.getElementById("dayLabel");
+
+  dayLabelEl.textContent =
     DAY_LABELS[mobileDay];
+
+  dayLabelEl.classList.toggle(
+    "today",
+    isToday(mobileWeek, mobileDay)
+  );
 
 
   document.getElementById(
