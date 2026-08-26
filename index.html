@@ -211,7 +211,7 @@ If anything breaks or if you have any suggestions for me to add, please contanct
 const CONFIG={
   API_BASE:"https://intranet.nbscmanlys-h.schools.nsw.edu.au",
   USER_EMAIL:"andre.kwok2@education.nsw.gov.au",
-  TOKEN_URL:"/api/token",
+  TOKEN_URL:"https://timetable-ivory-nine.vercel.app/api/token",
   getAuth(){
     const cached=JSON.parse(localStorage.getItem("weekly-token")||"null");
     return cached?.token?{type:cached.type||"Bearer",token:cached.token}:{type:"Bearer",token:null};
