@@ -17,14 +17,15 @@
 
   --accent: #0a84ff;
 
-  --chem: #12b5b0;
-  --phys: #0a84ff;
-  --ena: #e0a336;
-  --se: #a95bf0;
-  --engst: #f0568f;
-  --mah: #ff5b52;
-  --max1: #c23b2f;
-  --band: #5b6ee8;
+  --cat-math: #FFA9A6;
+  --cat-english: #FEFB99;
+  --cat-technology: #FFD5F4;
+  --cat-music: #E0C0F4;
+  --cat-science: #A4FEFF;
+  --cat-hsie: #D7CDB3;
+  --cat-languages: #f2884b;
+  --cat-va: #FFADFF;
+  --cat-other: #A5D5FF;
 
   --break-bg: rgba(255,255,255,.28);
   --break-line: rgba(29,29,31,.12);
@@ -65,14 +66,16 @@
   --break-bg: rgba(255,255,255,.05);
   --break-line: rgba(255,255,255,.14);
 
-  --chem: #3fe0da;
-  --phys: #5aa9ff;
-  --ena: #f2bb3d;
-  --se: #c78cfb;
-  --engst: #ff7fab;
-  --mah: #ff7b73;
-  --max1: #ff9186;
-  --band: #8b9bff;
+  /* Subject colours — dark mode */
+  --cat-math: #FF8582;
+  --cat-english: #FFF06A;
+  --cat-technology: #FF9BDD;
+  --cat-music: #CFA8F4;
+  --cat-science: #76F0F2;
+  --cat-hsie: #D8C99F;
+  --cat-languages: #FF9B63;
+  --cat-other: #82C5FF;
+  --cat-va: #E56BE5;
 
   --page-bg:
     radial-gradient(
@@ -655,7 +658,12 @@ h1 {
 
 .cls.now {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 0;
+}
+
+.grid[data-outline-colors="1"] .cls:not(.now) {
+  outline: 2.5px solid var(--c, var(--accent));
+  outline-offset: 0;
 }
 
 /* =========================================================
@@ -745,6 +753,14 @@ h1 {
   flex-shrink: 0;
 }
 
+.schoolToggle {
+  order: 2;
+}
+
+.infoToggle {
+  order: 1;
+}
+
 .infoToggle {
   width: 38px;
   height: 38px;
@@ -765,6 +781,7 @@ h1 {
   font-weight: 600;
 
   cursor: pointer;
+  text-decoration: none;
 
   transition:
     transform .2s ease,
@@ -901,6 +918,100 @@ h1 {
   overflow-y: auto;
 }
 
+.settingsSection {
+  margin-bottom: 18px;
+}
+
+.settingsHeading {
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: .08em;
+  text-transform: uppercase;
+
+  color: var(--ink-faint);
+
+  margin-bottom: 10px;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 12px 14px;
+
+  background: var(--glass);
+
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.settingsRow + .settingsRow {
+  margin-top: 8px;
+}
+
+.settingsRow .settingsLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+
+  color: var(--ink);
+}
+
+.settingsRow .settingsHint {
+  font-size: 11px;
+  color: var(--ink-faint);
+
+  margin-top: 2px;
+}
+
+.switch {
+  position: relative;
+
+  width: 42px;
+  height: 25px;
+
+  flex-shrink: 0;
+
+  border-radius: 999px;
+
+  border: 1px solid var(--line);
+  background: var(--glass-hi);
+
+  cursor: pointer;
+
+  transition: background .2s ease;
+}
+
+.switch .knob {
+  position: absolute;
+
+  top: 2px;
+  left: 2px;
+
+  width: 19px;
+  height: 19px;
+
+  border-radius: 50%;
+
+  background: #fff;
+
+  box-shadow: 0 2px 5px rgba(0,0,0,.25);
+
+  transition: transform .2s ease;
+}
+
+.switch.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch.on .knob {
+  transform: translateX(17px);
+}
+
 .infoTextarea {
   width: 100%;
   min-height: 280px;
@@ -980,8 +1091,17 @@ h1 {
 }
 
 @media(max-width:760px) {
+
   .header-buttons {
     flex-direction: row;
+  }
+
+  .schoolToggle {
+    order: 2;
+  }
+
+  .infoToggle {
+    order: 1;
   }
 
   .infoOverlay {
@@ -1022,9 +1142,27 @@ h1 {
     width: min(260px, 90vw);
   }
 
+  .header-right {
+    flex-direction: column;
+
+    width: 100%;
+    align-items: center;
+
+    gap: 12px;
+  }
+
   .bell {
-    align-self: center;
+    align-self: stretch;
     text-align: center;
+
+    width: 100%;
+    max-width: 320px;
+
+    margin: 0 auto;
+  }
+
+  .refreshRow {
+    justify-content: center;
   }
 
   .weekSwitch {
@@ -1036,9 +1174,14 @@ h1 {
   }
 
   .grid {
-    grid-template-columns: 44px 1fr;
+    grid-template-columns: 1fr;
 
-    column-gap: 12px;
+    column-gap: 0;
+    row-gap: 10px;
+  }
+
+  .grid .corner-cell {
+    display: none;
   }
 
   .grid .head {
@@ -1047,7 +1190,6 @@ h1 {
 
   .grid .head.mobile-active {
     display: block;
-    grid-column: 1 / -1;
   }
 
   .grid > .time-column {
@@ -1061,7 +1203,11 @@ h1 {
   .grid > .day-column[data-active="1"] {
     display: block;
 
-    grid-column: 2;
+    grid-column: 1;
+
+    max-width: 420px;
+    margin: 0 auto;
+    width: 100%;
   }
 }
 </style>
@@ -1133,21 +1279,23 @@ h1 {
     </div>
   </div>
 
-  <div class="header-buttons">
-    <button
-      class="themeToggle"
-      id="themeToggle"
-      aria-label="Toggle dark mode"
-      title="Toggle dark mode"
-    >🌙</button>
+<div class="header-buttons">
+  <button
+    class="infoToggle"
+    id="infoToggle"
+    aria-label="Open settings"
+    title="Settings"
+  >⚙️</button>
 
-    <button
-      class="infoToggle"
-      id="infoToggle"
-      aria-label="Open information"
-      title="Extra information"
-    >ⓘ</button>
-  </div>
+  <a
+    class="infoToggle schoolToggle"
+    href="https://intranet.nbscmanlys-h.schools.nsw.edu.au/"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Open school intranet"
+    title="School intranet"
+  >🏫</a>
+</div>
 </div>
 
    
@@ -1184,7 +1332,7 @@ h1 {
           class="infoPopupTitle"
           id="infoPopupTitle"
         >
-          Notes and "About this timetable"
+          Settings & notes
         </div>
 
         <div class="infoPopupSubtitle">
@@ -1203,14 +1351,57 @@ h1 {
 
     <div class="infoPopupBody">
 
+      <div class="settingsSection">
+
+        <div class="settingsHeading">Settings</div>
+
+        <div class="settingsRow">
+          <div>
+            <div class="settingsLabel">Dark mode</div>
+          </div>
+
+          <div
+            class="switch"
+            id="themeSwitch"
+            role="switch"
+            aria-checked="false"
+            aria-label="Toggle dark mode"
+          >
+            <div class="knob"></div>
+          </div>
+        </div>
+
+        <div class="settingsRow">
+          <div>
+            <div class="settingsLabel">Colour outlines</div>
+            <div class="settingsHint">Outline each period in its subject colour</div>
+          </div>
+
+          <div
+            class="switch"
+            id="outlineSwitch"
+            role="switch"
+            aria-checked="false"
+            aria-label="Toggle colour outlines"
+          >
+            <div class="knob"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="settingsHeading">Notes</div>
+
       <textarea
         class="infoTextarea"
         id="infoTextarea"
         placeholder="Hi its me Andre Kwok, this is my timetable replacement I made because the original one looks so bad and OGGYP is down. This was made with a lot of love, dedication and too much vibe-coding. 
       
-To not waste a button, you can write extra information here, such as notes about your classes, reminders, or anything else you want to keep track of. This information is automatically saved in your browser and will be available the next time you visit this page.
+You can write extra information here, such as notes about your classes, reminders, or anything else you want to keep track of. This information is automatically saved in your browser and will be available the next time you visit this page.
 
-Please don't show this to anyone in the tech block cause I'm scared I'll be executed on the spot for exploiting the schools API."
+Please don't show this to anyone in the tech block cause I'm scared I'll be executed on the spot for exploiting the schools API.
+
+If anything breaks or if you have any suggestions for me to add, please contanct me at andretnk49@gmail.com, or anywhere else."
       ></textarea>
 
       <div class="infoPopupFooter">
@@ -1918,20 +2109,23 @@ function dayNameToParts(dayName) {
 
 const FALLBACK_COLORS = [
 
-  "var(--chem)",
-  "var(--phys)",
-  "var(--ena)",
-  "var(--se)",
-  "var(--engst)",
-  "var(--mah)",
-  "var(--max1)",
-  "var(--band)"
+  "var(--cat-other)"
 
 ];
 
 const subjectColorMap = {};
 
+/*
+  Category rules:
 
+  math        → red
+  english     → yellow
+  technology  → pink   (engineering, software, textiles, etc)
+  music       → purple
+  science     → blue   (physics, chemistry, biology, etc)
+  hsie        → brown  (history, geography, business, legal, etc)
+  languages   → orange
+*/
 function colorForSubject(key) {
 
   const normalized =
@@ -1939,38 +2133,97 @@ function colorForSubject(key) {
       .toLowerCase();
 
   if (
+    normalized.includes("math") ||
+    normalized.includes("mah") ||
+     normalized.includes("ma") ||
+    normalized.includes("extension") ||
+    normalized.includes("mx1") ||
+    normalized.includes("mx2") ||
+     normalized.includes("max1") ||
+    normalized.includes("max2") ||
+    /\bmat\b/.test(normalized)
+  )
+    return "var(--cat-math)";
+
+  if (
     normalized.includes("english") ||
+     normalized.includes("enx") ||
     normalized.includes("ena")
   )
-    return "var(--ena)";
+    return "var(--cat-english)";
+
+  if (
+    normalized.includes("engineer") ||
+    normalized.includes("software") ||
+    normalized === "se" ||
+    normalized.includes("-se-") ||
+     normalized.includes("se") ||
+    normalized.startsWith("se-") ||
+    normalized.endsWith("-se") ||
+    normalized.includes("technology") ||
+    normalized.includes("textile") ||
+    normalized.includes("graphics") ||
+    normalized.includes("digital") ||
+    normalized.includes("computing") ||
+    normalized.includes("ict") ||
+    normalized.includes("design") ||
+    normalized.includes("engst")
+  )
+    return "var(--cat-technology)";
+
+  if (
+    normalized.includes("mu")
+  )
+    return "var(--cat-music)";
 
   if (
     normalized.includes("physics") ||
-    normalized.includes("phys")
+    normalized.includes("phys") ||
+    normalized.includes("phy") ||
+    normalized.includes("chem") ||
+    normalized.includes("chm") ||
+    normalized.includes("biology") ||
+    normalized.includes("bio") ||
+    normalized.includes("science")
   )
-    return "var(--phys)";
+    return "var(--cat-science)";
 
   if (
-    normalized.includes("chem")
+    normalized.includes("history") ||
+    normalized.includes("geography") ||
+    normalized.includes("geo") ||
+    normalized.includes("business") ||
+    normalized.includes("legal") ||
+    normalized.includes("economics") ||
+    normalized.includes("commerce") ||
+    normalized.includes("society") ||
+    normalized.includes("hsie")
   )
-    return "var(--chem)";
+    return "var(--cat-hsie)";
 
   if (
-    normalized.includes("software") ||
-    normalized === "se"
+    normalized.includes("french") ||
+    normalized.includes("japanese") ||
+    normalized.includes("jap") ||
+    normalized.includes("chinese") ||
+    normalized.includes("spanish") ||
+    normalized.includes("german") ||
+    normalized.includes("italian") ||
+    normalized.includes("korean") ||
+    normalized.includes("language") ||
+    normalized.includes("lote")
   )
-    return "var(--se)";
+    return "var(--cat-languages)";
 
-  if (
-    normalized.includes("engineering")
-  )
-    return "var(--engst)";
 
-  if (
-    normalized.includes("math") ||
-    normalized.includes("mah")
+      if (
+    normalized.includes("visual arts") ||
+    normalized.includes("visual-art") ||
+    normalized.includes("visualart") ||
+    normalized.includes("va") ||
+    normalized.includes("art")
   )
-    return "var(--mah)";
+    return "var(--cat-va)";
 
   if (!subjectColorMap[normalized]) {
 
@@ -2385,7 +2638,7 @@ function normalizeTimetable(
         getPeriodNumber(period),
 
       subjKey:
-        String(subject)
+        String(subject + " " + code)
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-"),
 
@@ -2716,15 +2969,31 @@ function hasPeriodZero() {
   );
 }
 
-function timelineTop(time) {
+function hasPeriodZeroForDay(week, day) {
+
+  const rows =
+    SCHEDULE[week]?.[day] || [];
+
+  return rows.some(item =>
+    item.kind === "class" &&
+    String(item.periodNumber) === "0"
+  );
+}
+
+function timelineTop(time, timelineStart) {
+
+  const base =
+    timelineStart !== undefined
+      ? timelineStart
+      : TIMELINE_START;
 
   const minutes =
     timeToMin(time) -
-    TIMELINE_START;
+    base;
 
   return (
     minutes /
-    (TIMELINE_END - TIMELINE_START)
+    (TIMELINE_END - base)
   ) *
   TIMELINE_HEIGHT;
 }
@@ -2732,8 +3001,14 @@ function timelineTop(time) {
 
 function timelineHeight(
   start,
-  end
+  end,
+  timelineStart
 ) {
+
+  const base =
+    timelineStart !== undefined
+      ? timelineStart
+      : TIMELINE_START;
 
   const duration =
     timeToMin(end) -
@@ -2741,7 +3016,7 @@ function timelineHeight(
 
   return (
     duration /
-    (TIMELINE_END - TIMELINE_START)
+    (TIMELINE_END - base)
   ) *
   TIMELINE_HEIGHT;
 }
@@ -2827,10 +3102,19 @@ function build() {
     ];
 
 
+  const isMobileView =
+    window.matchMedia(
+      "(max-width:760px)"
+    ).matches;
+
+
   /* Corner */
 
   const corner =
     document.createElement("div");
+
+  corner.className =
+    "corner-cell";
 
   grid.appendChild(corner);
 
@@ -2966,6 +3250,16 @@ function build() {
       ]?.[day] || [];
 
 
+    const dayTimelineStart =
+      (isMobileView && day === mobileDay)
+        ? (
+            hasPeriodZeroForDay(currentWeek, day)
+              ? DEFAULT_TIMELINE_START
+              : NO_PERIOD_0_START
+          )
+        : TIMELINE_START;
+
+
     rows.forEach(item => {
 
       if (
@@ -2987,12 +3281,13 @@ function build() {
 
 
      const top =
-  timelineTop(item.start);
+  timelineTop(item.start, dayTimelineStart);
 
 const height =
   timelineHeight(
     item.start,
-    item.end
+    item.end,
+    dayTimelineStart
   );
 
 const VERTICAL_GAP = 8;
@@ -3741,9 +4036,9 @@ setInterval(
    THEME
 ========================================================= */
 
-const themeBtn =
+const themeSwitch =
   document.getElementById(
-    "themeToggle"
+    "themeSwitch"
   );
 
 
@@ -3760,10 +4055,20 @@ function applyTheme(theme) {
     theme;
 
 
-  themeBtn.textContent =
-    theme === "dark"
-      ? "☀️"
-      : "🌙";
+  const isDark =
+    theme === "dark";
+
+
+  themeSwitch.classList.toggle(
+    "on",
+    isDark
+  );
+
+
+  themeSwitch.setAttribute(
+    "aria-checked",
+    String(isDark)
+  );
 }
 
 
@@ -3798,7 +4103,7 @@ mq.addEventListener(
 );
 
 
-themeBtn.addEventListener(
+themeSwitch.addEventListener(
   "click",
   () => {
 
@@ -3816,6 +4121,69 @@ themeBtn.addEventListener(
 
 
     applyTheme(next);
+  }
+);
+
+
+/* =========================================================
+   OUTLINE-BY-COLOUR SETTING
+========================================================= */
+
+const outlineSwitch =
+  document.getElementById(
+    "outlineSwitch"
+  );
+
+const OUTLINE_STORAGE_KEY =
+  "timetable-outline-colors";
+
+let outlineByColor =
+  localStorage.getItem(
+    OUTLINE_STORAGE_KEY
+  ) !== "0";
+
+
+function applyOutlineSetting() {
+
+  grid.dataset.outlineColors =
+    outlineByColor
+      ? "1"
+      : "0";
+
+
+  outlineSwitch.classList.toggle(
+    "on",
+    outlineByColor
+  );
+
+
+  outlineSwitch.setAttribute(
+    "aria-checked",
+    String(outlineByColor)
+  );
+}
+
+
+applyOutlineSetting();
+
+
+outlineSwitch.addEventListener(
+  "click",
+  () => {
+
+    outlineByColor =
+      !outlineByColor;
+
+
+    localStorage.setItem(
+      OUTLINE_STORAGE_KEY,
+      outlineByColor
+        ? "1"
+        : "0"
+    );
+
+
+    applyOutlineSetting();
   }
 );
 /* =========================================================
