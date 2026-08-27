@@ -66,7 +66,8 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .cls .teacher{margin-top:3px}
 .cls .room{margin-top:auto}
 .cls.now{outline:2px solid var(--accent);outline-offset:0}
-.grid[data-outline-colors="1"] .cls:not(.now){outline:2.5px solid var(--c,var(--accent));outline-offset:0;background:color-mix(in srgb,var(--c,var(--accent)) 18%,var(--glass-hi))}
+.grid[data-outline-colors="1"] .cls:not(.now){outline:2.5px solid var(--c,var(--accent));outline-offset:0}
+.grid[data-outline-colors="1"] .cls.now{background:color-mix(in srgb,var(--c,var(--accent)) 22%,var(--glass-hi))}
 .cls{cursor:pointer}
 .break-card{position:absolute;left:0;right:0;margin-top:3px;margin-bottom:3px;display:flex;align-items:center;justify-content:center;background:var(--break-bg);border:1px dashed var(--break-line);border-radius:16px;color:var(--ink-faint)}
 .break-card .tag{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
@@ -982,7 +983,7 @@ function normalizeTimetable(rawTimetable,bellTimes){
             timeToMin(nxt.start)-
             timeToMin(cur.end);
 
-          if(gap>=5){
+          if(gap>=20){
             withGaps.push({
               kind:"free",
               start:cur.end,
