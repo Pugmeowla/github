@@ -54,7 +54,8 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .grid .head{font-weight:600;font-size:14px;text-align:center;padding:10px 4px 14px;color:var(--ink)}
 .grid .head small{display:block;font-weight:400;font-size:10.5px;color:var(--ink-faint);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
 .grid .head.today{color:var(--accent)}
-.grid .head.today:after{content:"";display:block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin:5px auto 0}
+.grid .head .day-name{display:inline-block}
+.grid .head.today .day-name:after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .day-column{position:relative;min-height:610px;background:rgba(255,255,255,.025);border-radius:18px}
 [data-theme=dark] .day-column{background:rgba(255,255,255,.015)}
 .time-column{position:relative;min-height:610px}
@@ -83,7 +84,7 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .infoToggle:active{transform:scale(.92)}
 .infoOverlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}
 .infoOverlay.open{opacity:1;visibility:visible}
-.infoPopup{width:min(620px,100%);max-height:min(720px,90vh);display:flex;flex-direction:column;background:var(--glass-hi);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--line);border-radius:26px;box-shadow:0 24px 70px rgba(0,0,0,.25),0 4px 16px rgba(0,0,0,.12);transform:translateY(12px) scale(.97);transition:transform .25s ease}
+.infoPopup{width:min(620px,100%);max-height:min(1000px,90vh);display:flex;flex-direction:column;background:var(--glass-hi);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--line);border-radius:26px;box-shadow:0 24px 70px rgba(0,0,0,.25),0 4px 16px rgba(0,0,0,.12);transform:translateY(12px) scale(.97);transition:transform .25s ease}
 .infoOverlay.open .infoPopup{transform:translateY(0) scale(1)}
 .infoPopupHeader{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 14px}
 .infoPopupTitle{font-size:19px;font-weight:700;letter-spacing:-.02em}
@@ -91,7 +92,7 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .infoClose{width:32px;height:32px;border:0;border-radius:50%;background:var(--glass);color:var(--ink);font-family:inherit;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s ease,background .2s ease}
 .infoClose:hover{background:var(--glass-hi);transform:scale(1.08)}
 .infoClose:active{transform:scale(.92)}
-.infoPopupBody{padding:0 22px 22px;overflow-y:auto}
+.infoPopupBody{padding:0 22px 18px;overflow-y:auto}
 .settingsSection{margin-bottom:18px}
 .settingsHeading{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}
 .settingsRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--glass);border:1px solid var(--line);border-radius:14px}
@@ -102,10 +103,10 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .switch .knob{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .2s ease}
 .switch.on{background:var(--accent);border-color:var(--accent)}
 .switch.on .knob{transform:translateX(17px)}
-.infoTextarea{width:100%;min-height:280px;max-height:55vh;resize:vertical;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--glass);color:var(--ink);font-family:inherit;font-size:14px;line-height:1.55;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
+.infoTextarea{width:100%;min-height:280px;max-height:55vh;resize:none;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--glass);color:var(--ink);font-family:inherit;font-size:14px;line-height:1.55;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
 .infoTextarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(10,132,255,.12)}
 .infoTextarea::placeholder{color:var(--ink-faint)}
-.infoPopupFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.infoPopupFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
 .infoSaved{font-size:11px;color:var(--ink-faint)}
 .infoClear,.infoRepoLink{border:1px solid var(--line);border-radius:10px;padding:7px 11px;background:var(--glass);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:background .2s ease,transform .2s ease}
 .infoClear{color:var(--ink-soft)}
@@ -209,11 +210,11 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 </div>
 <div class="settingsRow settingsRowBg">
 <div class="bgField">
-<label for="lightBgInput">Light BG</label>
+<label for="lightBgInput">Light Background Colour</label>
 <input type="text" id="lightBgInput" class="hexInput" placeholder="#ffffff" maxlength="7">
 </div>
 <div class="bgField">
-<label for="darkBgInput">Dark BG</label>
+<label for="darkBgInput">Dark Background Colour</label>
 <input type="text" id="darkBgInput" class="hexInput" placeholder="#101114" maxlength="7">
 </div>
 <button class="infoClear bgResetBtn" id="bgReset" type="button">Reset</button>
@@ -1054,7 +1055,7 @@ function build() {
       (isToday(currentWeek, day) ? " today" : "") +
       (day === mobileDay ? " mobile-active" : "");
 
-    head.innerHTML = `${DAY_LABELS[day]}<small>Week ${currentWeek}</small>`;
+    head.innerHTML = `<span class="day-name">${DAY_LABELS[day]}</span><small>Week ${currentWeek}</small>`;
 
     grid.appendChild(head);
   });
