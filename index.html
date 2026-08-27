@@ -67,7 +67,7 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .cls .room{margin-top:auto}
 .cls.now{outline:2px solid var(--accent);outline-offset:0}
 .grid[data-outline-colors="1"] .cls:not(.now){outline:2.5px solid var(--c,var(--accent));outline-offset:0}
-.grid[data-outline-colors="1"] .cls.now{background:color-mix(in srgb,var(--c,var(--accent)) 22%,var(--glass-hi))}
+.grid[data-outline-colors="1"] .cls.now{background:color-mix(in srgb,var(--accent) 22%,var(--glass-hi))}
 .cls{cursor:pointer}
 .break-card{position:absolute;left:0;right:0;margin-top:3px;margin-bottom:3px;display:flex;align-items:center;justify-content:center;background:var(--break-bg);border:1px dashed var(--break-line);border-radius:16px;color:var(--ink-faint)}
 .break-card .tag{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
@@ -261,895 +261,803 @@ If anything breaks or if you have any suggestions for me to add, please contanct
 <div class="grid" id="grid"></div>
 </div>
 
-<script>
-const CONFIG={
-  API_BASE:"https://intranet.nbscmanlys-h.schools.nsw.edu.au",
-  TOKEN_URL:"https://timetable-ivory-nine.vercel.app/api/token",
-  USER_EMAIL:"andre.kwok2@education.nsw.gov.au"
+<script>const CONFIG = {
+  API_BASE: "https://intranet.nbscmanlys-h.schools.nsw.edu.au",
+  TOKEN_URL: "https://timetable-ivory-nine.vercel.app/api/token",
+  USER_EMAIL: "andre.kwok2@education.nsw.gov.au",
 };
 
-function decodeJwtPayload(token){
-  try{
-    const part=token.split(".")[1];
-    return JSON.parse(atob(part.replace(/-/g,"+").replace(/_/g,"/")));
-  }catch{
+function decodeJwtPayload(token) {
+  try {
+    const part = token.split(".")[1];
+    return JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
     return null;
   }
 }
 
-async function loadToken(){
-  const cached=JSON.parse(localStorage.getItem("school-token")||"null");
-  const REFRESH_BEFORE=60*60*1000;
+async function loadToken() {
+  const cached = JSON.parse(localStorage.getItem("school-token") || "null");
+  const REFRESH_BEFORE = 60 * 60 * 1000;
 
-  if(cached?.token&&cached?.exp){
-    const expiresAt=cached.exp*1000;
-    if(Date.now()<expiresAt-REFRESH_BEFORE)return cached;
+  if (cached?.token && cached?.exp) {
+    const expiresAt = cached.exp * 1000;
+    if (Date.now() < expiresAt - REFRESH_BEFORE) return cached;
   }
 
-  const res=await fetch(CONFIG.TOKEN_URL,{
-    method:"GET",
-    headers:{Accept:"application/json"}
+  const res = await fetch(CONFIG.TOKEN_URL, {
+    method: "GET",
+    headers: { Accept: "application/json" },
   });
 
-  if(!res.ok){
-    throw new ApiError("Unable to obtain the school token.",res.status);
+  if (!res.ok) {
+    throw new ApiError("Unable to obtain the school token.", res.status);
   }
 
-  const data=await res.json();
+  const data = await res.json();
 
-  if(!data.token){
-    throw new ApiError("Token server did not return a token.",502);
+  if (!data.token) {
+    throw new ApiError("Token server did not return a token.", 502);
   }
 
-  const payload=decodeJwtPayload(data.token);
+  const payload = decodeJwtPayload(data.token);
 
-  if(!payload?.exp){
-    throw new ApiError("Token did not contain an expiration time.",502);
+  if (!payload?.exp) {
+    throw new ApiError("Token did not contain an expiration time.", 502);
   }
 
-  const auth={
-    token:data.token,
-    type:data.type||"Bearer",
-    iat:payload.iat||null,
-    exp:payload.exp
+  const auth = {
+    token: data.token,
+    type: data.type || "Bearer",
+    iat: payload.iat || null,
+    exp: payload.exp,
   };
 
-  localStorage.setItem("school-token",JSON.stringify(auth));
+  localStorage.setItem("school-token", JSON.stringify(auth));
   return auth;
 }
 
-function formatName(name){
-  if(!name)return"";
-  return name.split(/[-\s]+/).filter(Boolean).map(p=>p.charAt(0).toUpperCase()+p.slice(1).toLowerCase()).join(" ");
+function formatName(name) {
+  if (!name) return "";
+  return name
+    .split(/[-\s]+/)
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(" ");
 }
 
-function nameFromEmail(email){
-  if(!email||!email.includes("@"))return null;
-  const parts=email.split("@")[0].split(".");
-  if(parts.length<2)return null;
-  return formatName(parts[0])+" "+formatName(parts[1].replace(/\d+$/,""));
+function nameFromEmail(email) {
+  if (!email || !email.includes("@")) return null;
+  const parts = email.split("@")[0].split(".");
+  if (parts.length < 2) return null;
+  return formatName(parts[0]) + " " + formatName(parts[1].replace(/\d+$/, ""));
 }
 
-function getCurrentEmail(){
-  const input=document.getElementById("emailInput");
-  let username=input.value.trim();
-  if(!username)username=CONFIG.USER_EMAIL.split("@")[0];
-  if(username.includes("@"))username=username.split("@")[0];
-  return username+"@education.nsw.gov.au";
+function getCurrentEmail() {
+  const input = document.getElementById("emailInput");
+  let username = input.value.trim();
+  if (!username) username = CONFIG.USER_EMAIL.split("@")[0];
+  if (username.includes("@")) username = username.split("@")[0];
+  return username + "@education.nsw.gov.au";
 }
 
-function updateProfileDisplay(email,apiProfile=null){
-  let name=null;
+function updateProfileDisplay(email, apiProfile = null) {
+  let name = null;
 
-  if(apiProfile){
-    name=apiProfile.FullName||apiProfile.fullName||[
-      apiProfile.FirstName||apiProfile.firstName,
-      apiProfile.LastName||apiProfile.lastName
-    ].filter(Boolean).join(" ");
+  if (apiProfile) {
+    name =
+      apiProfile.FullName ||
+      apiProfile.fullName ||
+      [apiProfile.FirstName || apiProfile.firstName, apiProfile.LastName || apiProfile.lastName]
+        .filter(Boolean)
+        .join(" ");
   }
 
-  if(!name)name=nameFromEmail(email);
-  if(!name)name="Timetable";
+  if (!name) name = nameFromEmail(email);
+  if (!name) name = "Timetable";
 
-  document.getElementById("profileName").textContent=name;
-  document.title=`${name} — Timetable`;
+  document.getElementById("profileName").textContent = name;
+  document.title = `${name} — Timetable`;
 }
 
-function timeToMin(value){
-  if(value==null||value==="")return 0;
+function timeToMin(value) {
+  if (value == null || value === "") return 0;
 
-  let str=String(value).trim(),ampm=str.match(/\s*(AM|PM)$/i);
-  str=str.replace(/\s*(AM|PM)$/i,"");
+  let str = String(value).trim(),
+    ampm = str.match(/\s*(AM|PM)$/i);
+  str = str.replace(/\s*(AM|PM)$/i, "");
 
-  const parts=str.split(":");
-  let h=Number(parts[0]),m=Number(parts[1]||0);
+  const parts = str.split(":");
+  let h = Number(parts[0]),
+    m = Number(parts[1] || 0);
 
-  if(ampm){
-    const pm=ampm[1].toLowerCase()==="pm";
-    if(pm&&h<12)h+=12;
-    if(!pm&&h===12)h=0;
+  if (ampm) {
+    const pm = ampm[1].toLowerCase() === "pm";
+    if (pm && h < 12) h += 12;
+    if (!pm && h === 12) h = 0;
   }
 
-  return h*60+m;
+  return h * 60 + m;
 }
 
-function formatTime(value){
-  if(!value)return"";
+function formatTime(value) {
+  if (!value) return "";
 
-  const total=timeToMin(value),h=Math.floor(total/60),m=total%60;
+  const total = timeToMin(value),
+    h = Math.floor(total / 60),
+    m = total % 60;
 
-  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
 }
 
-function getPeriodNumber(value){
-  if(value==null)return"";
+function getPeriodNumber(value) {
+  if (value == null) return "";
 
-  const str=String(value).trim(),match=str.match(/(?:period|p)?\s*(\d+)/i);
+  const str = String(value).trim(),
+    match = str.match(/(?:period|p)?\s*(\d+)/i);
 
-  return match?match[1]:str;
+  return match ? match[1] : str;
 }
 
-class ApiError extends Error{
-  constructor(message,status){
+class ApiError extends Error {
+  constructor(message, status) {
     super(message);
-    this.status=status;
+    this.status = status;
   }
 }
 
-async function apiGet(path,retry=true){
-  const {type,token}=await loadToken();
+async function apiGet(path, retry = true) {
+  const { type, token } = await loadToken();
 
-  if(!token){
-    throw new ApiError("Unable to obtain a school token.",401);
+  if (!token) {
+    throw new ApiError("Unable to obtain a school token.", 401);
   }
 
   let res;
 
-  try{
-    res=await fetch(CONFIG.API_BASE+path,{
-      method:"GET",
-      headers:{
-        Authorization:`${type} ${token}`,
-        Accept:"application/json"
-      }
+  try {
+    res = await fetch(CONFIG.API_BASE + path, {
+      method: "GET",
+      headers: {
+        Authorization: `${type} ${token}`,
+        Accept: "application/json",
+      },
     });
-  }catch(e){
-    throw new ApiError("Network error contacting the school intranet.",0);
+  } catch (e) {
+    throw new ApiError("Network error contacting the school intranet.", 0);
   }
 
-  if(res.status===401&&retry){
+  if (res.status === 401 && retry) {
     localStorage.removeItem("school-token");
-    return apiGet(path,false);
+    return apiGet(path, false);
   }
 
-  if(res.status===401){
-    throw new ApiError("The new school session was rejected.",401);
+  if (res.status === 401) {
+    throw new ApiError("The new school session was rejected.", 401);
   }
 
-  if(res.status===403){
-    throw new ApiError("Access to this timetable was denied.",403);
+  if (res.status === 403) {
+    throw new ApiError("Access to this timetable was denied.", 403);
   }
 
-  if(res.status===404){
-    throw new ApiError("That endpoint was not found.",404);
+  if (res.status === 404) {
+    throw new ApiError("That endpoint was not found.", 404);
   }
 
-  if(!res.ok){
-    throw new ApiError(`Unexpected server response (${res.status}).`,res.status);
+  if (!res.ok) {
+    throw new ApiError(`Unexpected server response (${res.status}).`, res.status);
   }
 
-  const contentType=res.headers.get("Content-Type")||"";
+  const contentType = res.headers.get("Content-Type") || "";
 
-  if(!contentType.includes("application/json")){
-    throw new ApiError("Server returned an unexpected response format.",res.status);
+  if (!contentType.includes("application/json")) {
+    throw new ApiError("Server returned an unexpected response format.", res.status);
   }
 
   return await res.json();
 }
 
-const timetableService=(()=>{
-  let cache={
-    email:null,
-    timetable:null,
-    bellTimes:null,
-    startDate:null,
-    profile:null,
-    fetchedAt:null
+const timetableService = (() => {
+  let cache = {
+    email: null,
+    timetable: null,
+    bellTimes: null,
+    startDate: null,
+    profile: null,
+    fetchedAt: null,
   };
 
-  async function loadAll(force=false){
-    const email=getCurrentEmail();
+  async function loadAll(force = false) {
+    const email = getCurrentEmail();
 
-    if(cache.email!==email){
-      cache={
+    if (cache.email !== email) {
+      cache = {
         email,
-        timetable:null,
-        bellTimes:null,
-        startDate:null,
-        profile:null,
-        fetchedAt:null
+        timetable: null,
+        bellTimes: null,
+        startDate: null,
+        profile: null,
+        fetchedAt: null,
       };
     }
 
-    if(cache.timetable&&!force)return cache;
+    if (cache.timetable && !force) return cache;
 
-    const [timetable,bellTimes,startDateRes,profile]=await Promise.all([
+    const [timetable, bellTimes, startDateRes, profile] = await Promise.all([
       apiGet(`/api/timetable/${encodeURIComponent(email)}`),
-      apiGet("/api/timetable/bell-times").catch(()=>null),
-      apiGet("/api/timetable/settings/start-date").catch(()=>null),
-      apiGet(`/api/user/${encodeURIComponent(email)}`).catch(()=>null)
+      apiGet("/api/timetable/bell-times").catch(() => null),
+      apiGet("/api/timetable/settings/start-date").catch(() => null),
+      apiGet(`/api/user/${encodeURIComponent(email)}`).catch(() => null),
     ]);
 
-    console.log("Timetable API response:",timetable);
-    console.log("Bell times API response:",bellTimes);
+    console.log("Timetable API response:", timetable);
+    console.log("Bell times API response:", bellTimes);
 
-    cache={
+    cache = {
       email,
       timetable,
       bellTimes,
-      startDate:startDateRes,
+      startDate: startDateRes,
       profile,
-      fetchedAt:new Date()
+      fetchedAt: new Date(),
     };
 
     return cache;
   }
 
-  return{
+  return {
     loadAll,
-    get current(){
+    get current() {
       return cache;
-    }
+    },
   };
 })();
 
-const CYCLE_DAYS=[
-  "MonA","TueA","WedA","ThuA","FriA",
-  "MonB","TueB","WedB","ThuB","FriB"
-];
+const CYCLE_DAYS = ["MonA", "TueA", "WedA", "ThuA", "FriA", "MonB", "TueB", "WedB", "ThuB", "FriB"];
 
-const DAY_LABELS={
-  mon:"Monday",
-  tue:"Tuesday",
-  wed:"Wednesday",
-  thu:"Thursday",
-  fri:"Friday"
+const DAY_LABELS = {
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
 };
 
-const DAY_ORDER=["mon","tue","wed","thu","fri"];
-const WEEK_ORDER=["A","B"];
+const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri"];
+const WEEK_ORDER = ["A", "B"];
 
-function extractDateString(data){
-  if(!data)return null;
-  if(typeof data==="string")return data;
+function extractDateString(data) {
+  if (!data) return null;
+  if (typeof data === "string") return data;
 
-  return data.startDate||
-    data.StartDate||
-    data.date||
-    data.Date||
-    null;
+  return data.startDate || data.StartDate || data.date || data.Date || null;
 }
 
-function getTimetableDay(date,cycleStartDate){
-  const d=new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
+function getTimetableDay(date, cycleStartDate) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-  const dow=d.getDay();
+  const dow = d.getDay();
 
-  if(dow===0||dow===6||!cycleStartDate)return null;
+  if (dow === 0 || dow === 6 || !cycleStartDate) return null;
 
-  const start=new Date(
+  const start = new Date(
     cycleStartDate.getFullYear(),
     cycleStartDate.getMonth(),
-    cycleStartDate.getDate()
+    cycleStartDate.getDate(),
   );
 
-  if(d<start)return null;
+  if (d < start) return null;
 
-  let elapsed=0;
-  const cursor=new Date(start);
+  let elapsed = 0;
+  const cursor = new Date(start);
 
-  while(cursor<d){
-    cursor.setDate(cursor.getDate()+1);
+  while (cursor < d) {
+    cursor.setDate(cursor.getDate() + 1);
 
-    const cdow=cursor.getDay();
+    const cdow = cursor.getDay();
 
-    if(cdow!==0&&cdow!==6)elapsed++;
+    if (cdow !== 0 && cdow !== 6) elapsed++;
   }
 
-  return CYCLE_DAYS[elapsed%10];
+  return CYCLE_DAYS[elapsed % 10];
 }
 
-function dayNameToParts(dayName){
-  const clean=String(dayName).trim();
-  const week=clean.slice(-1).toUpperCase();
+function dayNameToParts(dayName) {
+  const clean = String(dayName).trim();
+  const week = clean.slice(-1).toUpperCase();
 
-  return{
-    dayKey:clean.slice(0,-1).toLowerCase().slice(0,3),
-    week
+  return {
+    dayKey: clean.slice(0, -1).toLowerCase().slice(0, 3),
+    week,
   };
 }
 
-const FALLBACK_COLORS=["var(--cat-other)"];
-const subjectColorMap={};
+const FALLBACK_COLORS = ["var(--cat-other)"];
+const subjectColorMap = {};
 
-function colorForSubject(key){
-  const normalized=String(key||"").toLowerCase();
+function colorForSubject(key) {
+  const normalized = String(key || "").toLowerCase();
 
-  if(
-    normalized.includes("math")||
-    normalized.includes("mah")||
-    normalized.includes("ma")||
-    normalized.includes("extension")||
-    normalized.includes("mx1")||
-    normalized.includes("mx2")||
-    normalized.includes("max1")||
-    normalized.includes("max2")||
+  if (
+    normalized.includes("math") ||
+    normalized.includes("mah") ||
+    normalized.includes("ma") ||
+    normalized.includes("extension") ||
+    normalized.includes("mx1") ||
+    normalized.includes("mx2") ||
+    normalized.includes("max1") ||
+    normalized.includes("max2") ||
     /\bmat\b/.test(normalized)
-  )return"var(--cat-math)";
+  )
+    return "var(--cat-math)";
 
-  if(
-    normalized.includes("english")||
-    normalized.includes("enx")||
-    normalized.includes("ena")
-  )return"var(--cat-english)";
+  if (normalized.includes("english") || normalized.includes("enx") || normalized.includes("ena"))
+    return "var(--cat-english)";
 
-  if(
-    normalized.includes("engineer")||
-    normalized.includes("software")||
-    normalized==="se"||
-    normalized.includes("-se-")||
-    normalized.includes("se")||
-    normalized.startsWith("se-")||
-    normalized.endsWith("-se")||
-    normalized.includes("technology")||
-    normalized.includes("textile")||
-    normalized.includes("graphics")||
-    normalized.includes("digital")||
-    normalized.includes("computing")||
-    normalized.includes("ict")||
-    normalized.includes("design")||
+  if (
+    normalized.includes("engineer") ||
+    normalized.includes("software") ||
+    normalized === "se" ||
+    normalized.includes("-se-") ||
+    normalized.includes("se") ||
+    normalized.startsWith("se-") ||
+    normalized.endsWith("-se") ||
+    normalized.includes("technology") ||
+    normalized.includes("textile") ||
+    normalized.includes("graphics") ||
+    normalized.includes("digital") ||
+    normalized.includes("computing") ||
+    normalized.includes("ict") ||
+    normalized.includes("design") ||
     normalized.includes("engst")
-  )return"var(--cat-technology)";
+  )
+    return "var(--cat-technology)";
 
-  if(normalized.includes("mu"))return"var(--cat-music)";
+  if (normalized.includes("mu")) return "var(--cat-music)";
 
-  if(
-    normalized.includes("physics")||
-    normalized.includes("phys")||
-    normalized.includes("phy")||
-    normalized.includes("chem")||
-    normalized.includes("chm")||
-    normalized.includes("biology")||
-    normalized.includes("bio")||
+  if (
+    normalized.includes("physics") ||
+    normalized.includes("phys") ||
+    normalized.includes("phy") ||
+    normalized.includes("chem") ||
+    normalized.includes("chm") ||
+    normalized.includes("biology") ||
+    normalized.includes("bio") ||
     normalized.includes("science")
-  )return"var(--cat-science)";
+  )
+    return "var(--cat-science)";
 
-  if(
-    normalized.includes("history")||
-    normalized.includes("geography")||
-    normalized.includes("geo")||
-    normalized.includes("business")||
-    normalized.includes("legal")||
-    normalized.includes("economics")||
-    normalized.includes("commerce")||
-    normalized.includes("society")||
+  if (
+    normalized.includes("history") ||
+    normalized.includes("geography") ||
+    normalized.includes("geo") ||
+    normalized.includes("business") ||
+    normalized.includes("legal") ||
+    normalized.includes("economics") ||
+    normalized.includes("commerce") ||
+    normalized.includes("society") ||
     normalized.includes("hsie")
-  )return"var(--cat-hsie)";
+  )
+    return "var(--cat-hsie)";
 
-  if(
-    normalized.includes("french")||
-    normalized.includes("japanese")||
-    normalized.includes("jap")||
-    normalized.includes("chinese")||
-    normalized.includes("spanish")||
-    normalized.includes("german")||
-    normalized.includes("italian")||
-    normalized.includes("korean")||
-    normalized.includes("language")||
+  if (
+    normalized.includes("french") ||
+    normalized.includes("japanese") ||
+    normalized.includes("jap") ||
+    normalized.includes("chinese") ||
+    normalized.includes("spanish") ||
+    normalized.includes("german") ||
+    normalized.includes("italian") ||
+    normalized.includes("korean") ||
+    normalized.includes("language") ||
     normalized.includes("lote")
-  )return"var(--cat-languages)";
+  )
+    return "var(--cat-languages)";
 
-  if(
-    normalized.includes("visual arts")||
-    normalized.includes("visual-art")||
-    normalized.includes("visualart")||
-    normalized.includes("va")||
+  if (
+    normalized.includes("visual arts") ||
+    normalized.includes("visual-art") ||
+    normalized.includes("visualart") ||
+    normalized.includes("va") ||
     normalized.includes("art")
-  )return"var(--cat-va)";
+  )
+    return "var(--cat-va)";
 
-  if(!subjectColorMap[normalized]){
-    const index=
-      Object.keys(subjectColorMap).length%
-      FALLBACK_COLORS.length;
+  if (!subjectColorMap[normalized]) {
+    const index = Object.keys(subjectColorMap).length % FALLBACK_COLORS.length;
 
-    subjectColorMap[normalized]=FALLBACK_COLORS[index];
+    subjectColorMap[normalized] = FALLBACK_COLORS[index];
   }
 
   return subjectColorMap[normalized];
 }
 
-function findBellTime(bellTimes,dayName,period){
-  if(!Array.isArray(bellTimes))return null;
+function findBellTime(bellTimes, dayName, period) {
+  if (!Array.isArray(bellTimes)) return null;
 
-  const p=getPeriodNumber(period).toLowerCase();
-  const d=String(dayName??"").trim().toLowerCase();
+  const p = getPeriodNumber(period).toLowerCase();
+  const d = String(dayName ?? "")
+    .trim()
+    .toLowerCase();
 
-  let match=bellTimes.find(bt=>{
-    const bp=getPeriodNumber(
-      bt.Period??
-      bt.period??
-      bt.PeriodNumber??
-      bt.periodNumber??
-      ""
+  let match = bellTimes.find((bt) => {
+    const bp = getPeriodNumber(
+      bt.Period ?? bt.period ?? bt.PeriodNumber ?? bt.periodNumber ?? "",
     ).toLowerCase();
 
-    const bd=String(
-      bt.DayName??
-      bt.dayName??
-      ""
-    ).trim().toLowerCase();
+    const bd = String(bt.DayName ?? bt.dayName ?? "")
+      .trim()
+      .toLowerCase();
 
-    return bp===p&&bd===d;
+    return bp === p && bd === d;
   });
 
-  if(!match){
-    match=bellTimes.find(bt=>{
-      const bp=getPeriodNumber(
-        bt.Period??
-        bt.period??
-        bt.PeriodNumber??
-        bt.periodNumber??
-        ""
+  if (!match) {
+    match = bellTimes.find((bt) => {
+      const bp = getPeriodNumber(
+        bt.Period ?? bt.period ?? bt.PeriodNumber ?? bt.periodNumber ?? "",
       ).toLowerCase();
 
-      return !(bt.DayName||bt.dayName)&&bp===p;
+      return !(bt.DayName || bt.dayName) && bp === p;
     });
   }
 
-  if(!match){
-    match=bellTimes.find(bt=>{
-      const bp=getPeriodNumber(
-        bt.Period??
-        bt.period??
-        bt.PeriodNumber??
-        bt.periodNumber??
-        ""
+  if (!match) {
+    match = bellTimes.find((bt) => {
+      const bp = getPeriodNumber(
+        bt.Period ?? bt.period ?? bt.PeriodNumber ?? bt.periodNumber ?? "",
       ).toLowerCase();
 
-      return bp===p;
+      return bp === p;
     });
   }
 
-  if(!match)return null;
+  if (!match) return null;
 
-  return{
+  return {
     start:
-      match.StartTime??
-      match.startTime??
-      match.Start??
-      match.start??
-      match.BellStart??
-      match.bellStart??
+      match.StartTime ??
+      match.startTime ??
+      match.Start ??
+      match.start ??
+      match.BellStart ??
+      match.bellStart ??
       null,
 
     end:
-      match.EndTime??
-      match.endTime??
-      match.End??
-      match.end??
-      match.BellEnd??
-      match.bellEnd??
-      null
+      match.EndTime ??
+      match.endTime ??
+      match.End ??
+      match.end ??
+      match.BellEnd ??
+      match.bellEnd ??
+      null,
   };
 }
 
-function classifyPeriod(value){
-  const p=String(value??"").toLowerCase();
+function classifyPeriod(value) {
+  const p = String(value ?? "").toLowerCase();
 
-  if(p.includes("assembly"))return"assembly";
-  if(p.includes("recess")||p==="break")return"break";
-  if(p.includes("lunch"))return"lunch";
+  if (p.includes("assembly")) return "assembly";
+  if (p.includes("recess") || p === "break") return "break";
+  if (p.includes("lunch")) return "lunch";
 
-  return"class";
+  return "class";
 }
 
-function getTeacher(raw){
-  const value=
-    raw.TeacherName??
-    raw.teacherName??
-    raw.TeacherFullName??
-    raw.teacherFullName??
-    raw.Teacher??
-    raw.teacher??
-    raw.StaffName??
-    raw.staffName??
+function getTeacher(raw) {
+  const value =
+    raw.TeacherName ??
+    raw.teacherName ??
+    raw.TeacherFullName ??
+    raw.teacherFullName ??
+    raw.Teacher ??
+    raw.teacher ??
+    raw.StaffName ??
+    raw.staffName ??
     "";
 
-  if(!value)return"";
+  if (!value) return "";
 
-  if(typeof value==="string"&&value.includes("@")){
-    const parts=value.split("@")[0].split(".");
+  if (typeof value === "string" && value.includes("@")) {
+    const parts = value.split("@")[0].split(".");
 
-    if(parts.length>=2){
-      return formatName(parts[0])+
-        " "+
-        formatName(parts[1].replace(/\d+$/,""));
+    if (parts.length >= 2) {
+      return formatName(parts[0]) + " " + formatName(parts[1].replace(/\d+$/, ""));
     }
 
-    return formatName(
-      value.split("@")[0].replace(/\d+$/,"")
-    );
+    return formatName(value.split("@")[0].replace(/\d+$/, ""));
   }
 
   return String(value).trim();
 }
 
-function getRoom(raw){
-  const value=
-    raw.RoomNumber??
-    raw.roomNumber??
-    raw.RoomName??
-    raw.roomName??
-    raw.Room??
-    raw.room??
-    raw.Location??
-    raw.location??
-    raw.RoomCode??
-    raw.roomCode??
+function getRoom(raw) {
+  const value =
+    raw.RoomNumber ??
+    raw.roomNumber ??
+    raw.RoomName ??
+    raw.roomName ??
+    raw.Room ??
+    raw.room ??
+    raw.Location ??
+    raw.location ??
+    raw.RoomCode ??
+    raw.roomCode ??
     "";
 
-  return value?String(value).trim():"";
+  return value ? String(value).trim() : "";
 }
 
-function getSubject(raw){
-  return raw.SubjectName||
-    raw.Subject||
-    raw.subjectName||
-    raw.subject||
-    raw.Class||
-    raw.class||
-    "Class";
-}
-
-function getCode(raw,subject){
-  return raw.ClassCode||
-    raw.classCode||
-    raw.Code||
-    raw.code||
-    raw.Class||
-    raw.class||
-    subject;
-}
-
-function getRawTimes(raw,bellTimes,dayName,period){
-  const bt=findBellTime(
-    bellTimes,
-    dayName,
-    period
+function getSubject(raw) {
+  return (
+    raw.SubjectName ||
+    raw.Subject ||
+    raw.subjectName ||
+    raw.subject ||
+    raw.Class ||
+    raw.class ||
+    "Class"
   );
+}
 
-  return{
-    start:
-      bt?.start||
-      raw.StartTime||
-      raw.startTime||
-      raw.Start||
-      raw.start||
-      null,
+function getCode(raw, subject) {
+  return (
+    raw.ClassCode || raw.classCode || raw.Code || raw.code || raw.Class || raw.class || subject
+  );
+}
 
-    end:
-      bt?.end||
-      raw.EndTime||
-      raw.endTime||
-      raw.End||
-      raw.end||
-      null
+function getRawTimes(raw, bellTimes, dayName, period) {
+  const bt = findBellTime(bellTimes, dayName, period);
+
+  return {
+    start: bt?.start || raw.StartTime || raw.startTime || raw.Start || raw.start || null,
+
+    end: bt?.end || raw.EndTime || raw.endTime || raw.End || raw.end || null,
   };
 }
 
-function normalizeTimetable(rawTimetable,bellTimes){
-  const grouped={
-    A:{mon:[],tue:[],wed:[],thu:[],fri:[]},
-    B:{mon:[],tue:[],wed:[],thu:[],fri:[]}
+function normalizeTimetable(rawTimetable, bellTimes) {
+  const grouped = {
+    A: { mon: [], tue: [], wed: [], thu: [], fri: [] },
+    B: { mon: [], tue: [], wed: [], thu: [], fri: [] },
   };
 
-  if(!Array.isArray(rawTimetable))return grouped;
+  if (!Array.isArray(rawTimetable)) return grouped;
 
-  for(const raw of rawTimetable){
-    const dayName=raw.DayName||raw.dayName;
+  for (const raw of rawTimetable) {
+    const dayName = raw.DayName || raw.dayName;
 
-    if(!dayName)continue;
+    if (!dayName) continue;
 
-    const {dayKey,week}=dayNameToParts(dayName);
+    const { dayKey, week } = dayNameToParts(dayName);
 
-    if(!grouped[week]||!grouped[week][dayKey])continue;
+    if (!grouped[week] || !grouped[week][dayKey]) continue;
 
-    const period=raw.Period??raw.period;
-    const kind=classifyPeriod(period);
-    const times=getRawTimes(
-      raw,
-      bellTimes,
-      dayName,
-      period
-    );
+    const period = raw.Period ?? raw.period;
+    const kind = classifyPeriod(period);
+    const times = getRawTimes(raw, bellTimes, dayName, period);
 
-    const subject=getSubject(raw);
-    const code=getCode(raw,subject);
+    const subject = getSubject(raw);
+    const code = getCode(raw, subject);
 
-    if(kind!=="class"){
+    if (kind !== "class") {
       grouped[week][dayKey].push({
         kind,
-        start:times.start,
-        end:times.end,
-        raw
+        start: times.start,
+        end: times.end,
+        raw,
       });
 
       continue;
     }
 
     grouped[week][dayKey].push({
-      kind:"class",
+      kind: "class",
       code,
-      periodNumber:getPeriodNumber(period),
-      subjKey:String(subject+" "+code)
+      periodNumber: getPeriodNumber(period),
+      subjKey: String(subject + " " + code)
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g,"-"),
-      subjName:subject,
-      teacher:getTeacher(raw),
-      room:getRoom(raw),
-      start:times.start,
-      end:times.end,
-      raw
+        .replace(/[^a-z0-9]+/g, "-"),
+      subjName: subject,
+      teacher: getTeacher(raw),
+      room: getRoom(raw),
+      start: times.start,
+      end: times.end,
+      raw,
     });
   }
 
-  for(const week of WEEK_ORDER){
-    for(const day of DAY_ORDER){
-      const rows=grouped[week][day];
-      const isWednesday=day==="wed";
+  for (const week of WEEK_ORDER) {
+    for (const day of DAY_ORDER) {
+      const rows = grouped[week][day];
+      const isWednesday = day === "wed";
 
-      const breaks=isWednesday
-        ?[
-          {kind:"assembly",start:"10:45",end:"11:05"},
-          {kind:"break",start:"11:05",end:"11:25"},
-          {kind:"lunch",start:"12:20",end:"13:00"}
-        ]
-        :[
-          {kind:"break",start:"10:45",end:"11:05"},
-          {kind:"lunch",start:"12:55",end:"13:35"}
-        ];
+      const breaks = isWednesday
+        ? [
+            { kind: "assembly", start: "10:45", end: "11:05" },
+            { kind: "break", start: "11:05", end: "11:25" },
+            { kind: "lunch", start: "12:20", end: "13:00" },
+          ]
+        : [
+            { kind: "break", start: "10:45", end: "11:05" },
+            { kind: "lunch", start: "12:55", end: "13:35" },
+          ];
 
-      for(const br of breaks){
-        const exists=rows.some(item=>
-          item.start&&
-          item.end&&
-          timeToMin(item.start)===timeToMin(br.start)&&
-          timeToMin(item.end)===timeToMin(br.end)
+      for (const br of breaks) {
+        const exists = rows.some(
+          (item) =>
+            item.start &&
+            item.end &&
+            timeToMin(item.start) === timeToMin(br.start) &&
+            timeToMin(item.end) === timeToMin(br.end),
         );
 
-        if(!exists)rows.push(br);
+        if (!exists) rows.push(br);
       }
 
-      if(isWednesday){
-        const wednesdayTimes={
-          "0":{start:"07:55",end:"08:55"},
-          "1":{start:"08:55",end:"09:50"},
-          "2":{start:"09:50",end:"10:45"},
-          "3":{start:"11:25",end:"12:20"},
-          "4":{start:"13:00",end:"13:55"},
-          "5":{start:"13:55",end:"14:50"}
+      if (isWednesday) {
+        const wednesdayTimes = {
+          0: { start: "07:55", end: "08:55" },
+          1: { start: "08:55", end: "09:50" },
+          2: { start: "09:50", end: "10:45" },
+          3: { start: "11:25", end: "12:20" },
+          4: { start: "13:00", end: "13:55" },
+          5: { start: "13:55", end: "14:50" },
         };
 
-        for(const item of rows){
-          if(item.kind!=="class")continue;
+        for (const item of rows) {
+          if (item.kind !== "class") continue;
 
-          const period=
-            item.periodNumber||
-            getPeriodNumber(
-              item.raw?.Period||
-              item.raw?.period
-            );
+          const period = item.periodNumber || getPeriodNumber(item.raw?.Period || item.raw?.period);
 
-          if(wednesdayTimes[period]){
-            item.start=wednesdayTimes[period].start;
-            item.end=wednesdayTimes[period].end;
+          if (wednesdayTimes[period]) {
+            item.start = wednesdayTimes[period].start;
+            item.end = wednesdayTimes[period].end;
           }
         }
       }
 
-      rows.sort(
-        (a,b)=>
-          timeToMin(a.start)-
-          timeToMin(b.start)
-      );
+      rows.sort((a, b) => timeToMin(a.start) - timeToMin(b.start));
 
-      const withGaps=[];
+      const withGaps = [];
 
-      for(let i=0;i<rows.length;i++){
+      for (let i = 0; i < rows.length; i++) {
         withGaps.push(rows[i]);
 
-        const cur=rows[i];
-        const nxt=rows[i+1];
+        const cur = rows[i];
+        const nxt = rows[i + 1];
 
-        if(
-          cur&&nxt&&
-          cur.end&&nxt.start
-        ){
-          const gap=
-            timeToMin(nxt.start)-
-            timeToMin(cur.end);
+        if (cur && nxt && cur.end && nxt.start) {
+          const gap = timeToMin(nxt.start) - timeToMin(cur.end);
 
-          if(gap>=20){
+          if (gap >= 20) {
             withGaps.push({
-              kind:"free",
-              start:cur.end,
-              end:nxt.start
+              kind: "free",
+              start: cur.end,
+              end: nxt.start,
             });
           }
         }
       }
 
-      grouped[week][day]=withGaps;
+      grouped[week][day] = withGaps;
     }
   }
 
   return grouped;
 }
 
-const grid=document.getElementById("grid");
-const statusBanner=document.getElementById("statusBanner");
-const refreshBtn=document.getElementById("refreshBtn");
-const updatedAtEl=document.getElementById("updatedAt");
+const grid = document.getElementById("grid");
+const statusBanner = document.getElementById("statusBanner");
+const refreshBtn = document.getElementById("refreshBtn");
+const updatedAtEl = document.getElementById("updatedAt");
 
-let SCHEDULE={
-  A:{mon:[],tue:[],wed:[],thu:[],fri:[]},
-  B:{mon:[],tue:[],wed:[],thu:[],fri:[]}
+let SCHEDULE = {
+  A: { mon: [], tue: [], wed: [], thu: [], fri: [] },
+  B: { mon: [], tue: [], wed: [], thu: [], fri: [] },
 };
 
-let TODAY_CYCLE_DAY=null;
-let currentWeek="A";
-let seqIndex=0;
+let TODAY_CYCLE_DAY = null;
+let currentWeek = "A";
+let seqIndex = 0;
 
-function setStatus(message,isError=false){
-  if(!message){
-    statusBanner.style.display="none";
+function setStatus(message, isError = false) {
+  if (!message) {
+    statusBanner.style.display = "none";
     return;
   }
 
-  statusBanner.style.display="block";
-  statusBanner.className=
-    "statusBanner"+
-    (isError?" error":"");
+  statusBanner.style.display = "block";
+  statusBanner.className = "statusBanner" + (isError ? " error" : "");
 
-  statusBanner.textContent=message;
+  statusBanner.textContent = message;
 }
 
-const DEFAULT_TIMELINE_START=7*60+55;
-const NO_PERIOD_0_START=8*60+55;
-const TIMELINE_END=14*60+50;
-const TIMELINE_HEIGHT=610;
+const DEFAULT_TIMELINE_START = 7 * 60 + 55;
+const NO_PERIOD_0_START = 8 * 60 + 55;
+const TIMELINE_END = 14 * 60 + 50;
+const TIMELINE_HEIGHT = 610;
 
-let TIMELINE_START=DEFAULT_TIMELINE_START;
+let TIMELINE_START = DEFAULT_TIMELINE_START;
 
-function hasPeriodZero(){
-  const week=SCHEDULE[currentWeek];
+function hasPeriodZero() {
+  const week = SCHEDULE[currentWeek];
 
-  if(!week)return false;
+  if (!week) return false;
 
-  return DAY_ORDER.some(day=>
-    (week[day]||[]).some(item=>
-      item.kind==="class"&&
-      String(item.periodNumber)==="0"
-    )
+  return DAY_ORDER.some((day) =>
+    (week[day] || []).some((item) => item.kind === "class" && String(item.periodNumber) === "0"),
   );
 }
 
-function hasPeriodZeroForDay(week,day){
-  return(SCHEDULE[week]?.[day]||[])
-    .some(item=>
-      item.kind==="class"&&
-      String(item.periodNumber)==="0"
-    );
-}
-
-function timelineTop(time,timelineStart){
-  const base=
-    timelineStart!==undefined?
-    timelineStart:
-    TIMELINE_START;
-
-  return(
-    (timeToMin(time)-base)/
-    (TIMELINE_END-base)*
-    TIMELINE_HEIGHT
+function hasPeriodZeroForDay(week, day) {
+  return (SCHEDULE[week]?.[day] || []).some(
+    (item) => item.kind === "class" && String(item.periodNumber) === "0",
   );
 }
 
-function timelineHeight(start,end,timelineStart){
-  const base=
-    timelineStart!==undefined?
-    timelineStart:
-    TIMELINE_START;
+function timelineTop(time, timelineStart) {
+  const base = timelineStart !== undefined ? timelineStart : TIMELINE_START;
 
-  return(
-    (timeToMin(end)-timeToMin(start))/
-    (TIMELINE_END-base)*
-    TIMELINE_HEIGHT
-  );
+  return ((timeToMin(time) - base) / (TIMELINE_END - base)) * TIMELINE_HEIGHT;
 }
 
-function isToday(week,dayKey){
-  if(!TODAY_CYCLE_DAY)return false;
+function timelineHeight(start, end, timelineStart) {
+  const base = timelineStart !== undefined ? timelineStart : TIMELINE_START;
 
-  return TODAY_CYCLE_DAY===
-    dayKey.charAt(0).toUpperCase()+
-    dayKey.slice(1)+
-    week;
+  return ((timeToMin(end) - timeToMin(start)) / (TIMELINE_END - base)) * TIMELINE_HEIGHT;
 }
 
-function isNowActive(week,dayKey,start,end){
-  if(!isToday(week,dayKey)||!start||!end)return false;
+function isToday(week, dayKey) {
+  if (!TODAY_CYCLE_DAY) return false;
 
-  const now=new Date();
-  const cur=
-    now.getHours()*60+
-    now.getMinutes();
-
-  return(
-    cur>=timeToMin(start)&&
-    cur<timeToMin(end)
-  );
+  return TODAY_CYCLE_DAY === dayKey.charAt(0).toUpperCase() + dayKey.slice(1) + week;
 }
 
-function build(){
-  grid.innerHTML="";
+function isNowActive(week, dayKey, start, end) {
+  if (!isToday(week, dayKey) || !start || !end) return false;
 
-  TIMELINE_START=
-    hasPeriodZero()?
-    DEFAULT_TIMELINE_START:
-    NO_PERIOD_0_START;
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
 
-  const mobileDay=DAY_ORDER[seqIndex%5];
+  return cur >= timeToMin(start) && cur < timeToMin(end);
+}
 
-  const mobileWeek=
-    WEEK_ORDER[
-      Math.floor(seqIndex/5)
-    ];
+function build() {
+  grid.innerHTML = "";
 
-  const isMobileView=
-    window.matchMedia(
-      "(max-width:760px)"
-    ).matches;
+  TIMELINE_START = hasPeriodZero() ? DEFAULT_TIMELINE_START : NO_PERIOD_0_START;
 
-  const corner=document.createElement("div");
+  const mobileDay = DAY_ORDER[seqIndex % 5];
 
-  corner.className="corner-cell";
+  const mobileWeek = WEEK_ORDER[Math.floor(seqIndex / 5)];
+
+  const isMobileView = window.matchMedia("(max-width:760px)").matches;
+
+  const corner = document.createElement("div");
+
+  corner.className = "corner-cell";
   grid.appendChild(corner);
 
-  DAY_ORDER.forEach(day=>{
-    const head=document.createElement("div");
+  DAY_ORDER.forEach((day) => {
+    const head = document.createElement("div");
 
-    head.className=
-      "head"+
-      (isToday(currentWeek,day)?" today":"")+
-      (day===mobileDay?" mobile-active":"");
+    head.className =
+      "head" +
+      (isToday(currentWeek, day) ? " today" : "") +
+      (day === mobileDay ? " mobile-active" : "");
 
-    head.innerHTML=
-      `${DAY_LABELS[day]}<small>Week ${currentWeek}</small>`;
+    head.innerHTML = `${DAY_LABELS[day]}<small>Week ${currentWeek}</small>`;
 
     grid.appendChild(head);
   });
 
-  const timeColumn=
-    document.createElement("div");
+  const timeColumn = document.createElement("div");
 
-  timeColumn.className="time-column";
+  timeColumn.className = "time-column";
 
-  const labels=[
+  const labels = [
     "07:55",
     "08:55",
     "09:50",
@@ -1161,175 +1069,131 @@ function build(){
     "13:00",
     "13:35",
     "13:55",
-    "14:50"
+    "14:50",
   ];
 
-  const MIN_LABEL_GAP=15;
-  let lastLabelTop=-Infinity;
+  const MIN_LABEL_GAP = 15;
+  let lastLabelTop = -Infinity;
 
   [...new Set(labels)]
-    .filter(time=>
-      timeToMin(time)>=TIMELINE_START&&
-      timeToMin(time)<=TIMELINE_END
-    )
-    .sort((a,b)=>timeToMin(a)-timeToMin(b))
-    .forEach(time=>{
-      let top=timelineTop(time);
+    .filter((time) => timeToMin(time) >= TIMELINE_START && timeToMin(time) <= TIMELINE_END)
+    .sort((a, b) => timeToMin(a) - timeToMin(b))
+    .forEach((time) => {
+      let top = timelineTop(time);
 
-      if(top-lastLabelTop<MIN_LABEL_GAP){
-        top=lastLabelTop+MIN_LABEL_GAP;
+      if (top - lastLabelTop < MIN_LABEL_GAP) {
+        top = lastLabelTop + MIN_LABEL_GAP;
       }
 
-      lastLabelTop=top;
+      lastLabelTop = top;
 
-      const label=document.createElement("div");
+      const label = document.createElement("div");
 
-      label.className="time-label";
-      label.style.top=`${top}px`;
-      label.textContent=time;
+      label.className = "time-label";
+      label.style.top = `${top}px`;
+      label.textContent = time;
 
       timeColumn.appendChild(label);
     });
 
   grid.appendChild(timeColumn);
 
-  DAY_ORDER.forEach(day=>{
-    const column=document.createElement("div");
+  DAY_ORDER.forEach((day) => {
+    const column = document.createElement("div");
 
-    column.className="day-column";
-    column.dataset.day=day;
-    column.dataset.active=
-      day===mobileDay?"1":"0";
+    column.className = "day-column";
+    column.dataset.day = day;
+    column.dataset.active = day === mobileDay ? "1" : "0";
 
-    const rows=
-      SCHEDULE[currentWeek]?.[day]||[];
+    const rows = SCHEDULE[currentWeek]?.[day] || [];
 
-    const dayTimelineStart=
-      isMobileView&&day===mobileDay
-        ?hasPeriodZeroForDay(
-          currentWeek,
-          day
-        )
-          ?DEFAULT_TIMELINE_START
-          :NO_PERIOD_0_START
-        :TIMELINE_START;
+    const dayTimelineStart =
+      isMobileView && day === mobileDay
+        ? hasPeriodZeroForDay(currentWeek, day)
+          ? DEFAULT_TIMELINE_START
+          : NO_PERIOD_0_START
+        : TIMELINE_START;
 
-    rows.forEach(item=>{
-      if(!item.start||!item.end)return;
+    rows.forEach((item) => {
+      if (!item.start || !item.end) return;
 
-      const start=timeToMin(item.start);
-      const end=timeToMin(item.end);
+      const start = timeToMin(item.start);
+      const end = timeToMin(item.end);
 
-      if(end<=start)return;
+      if (end <= start) return;
 
-      const top=
-        timelineTop(
-          item.start,
-          dayTimelineStart
-        );
+      const top = timelineTop(item.start, dayTimelineStart);
 
-      const height=
-        timelineHeight(
-          item.start,
-          item.end,
-          dayTimelineStart
-        );
+      const height = timelineHeight(item.start, item.end, dayTimelineStart);
 
-      const VERTICAL_GAP=8;
+      const VERTICAL_GAP = 8;
 
-      const finalTop=
-        top+
-        VERTICAL_GAP/2;
+      const finalTop = top + VERTICAL_GAP / 2;
 
-      const finalHeight=
-        Math.max(
-          height-VERTICAL_GAP,
-          20
-        );
+      const finalHeight = Math.max(height - VERTICAL_GAP, 20);
 
-      if(item.kind!=="class"){
-        const breakCard=
-          document.createElement("div");
+      if (item.kind !== "class") {
+        const breakCard = document.createElement("div");
 
-        breakCard.className="break-card";
+        breakCard.className = "break-card";
 
-        breakCard.style.top=
-          `${finalTop}px`;
+        breakCard.style.top = `${finalTop}px`;
 
-        breakCard.style.height=
-          `${finalHeight}px`;
+        breakCard.style.height = `${finalHeight}px`;
 
-        let label="Break";
+        let label = "Break";
 
-        if(item.kind==="lunch")label="Lunch";
-        if(item.kind==="break")label="Recess";
-        if(item.kind==="assembly")label="Assembly";
-        if(item.kind==="free")label="Free period";
+        if (item.kind === "lunch") label = "Lunch";
+        if (item.kind === "break") label = "Recess";
+        if (item.kind === "assembly") label = "Assembly";
+        if (item.kind === "free") label = "Free period";
 
-        breakCard.innerHTML=
-          `<span class="tag">${label}</span>`;
+        breakCard.innerHTML = `<span class="tag">${label}</span>`;
 
         column.appendChild(breakCard);
         return;
       }
 
-      const card=document.createElement("div");
+      const card = document.createElement("div");
 
-      card.className="cls";
+      card.className = "cls";
 
-      card.style.top=
-        `${finalTop}px`;
+      card.style.top = `${finalTop}px`;
 
-      card.style.height=
-        `${finalHeight}px`;
+      card.style.height = `${finalHeight}px`;
 
-      card.style.setProperty(
-        "--c",
-        colorForSubject(item.subjKey)
-      );
+      card.style.setProperty("--c", colorForSubject(item.subjKey));
 
-      if(
-        isNowActive(
-          currentWeek,
-          day,
-          item.start,
-          item.end
-        )
-      ){
+      if (isNowActive(currentWeek, day, item.start, item.end)) {
         card.classList.add("now");
       }
 
-      const code=document.createElement("div");
+      const code = document.createElement("div");
 
-      code.className="code";
-      code.textContent=item.code||"";
+      code.className = "code";
+      code.textContent = item.code || "";
 
       card.appendChild(code);
 
-      if(item.teacher){
-        const teacher=
-          document.createElement("div");
+      if (item.teacher) {
+        const teacher = document.createElement("div");
 
-        teacher.className="teacher";
-        teacher.textContent=item.teacher;
+        teacher.className = "teacher";
+        teacher.textContent = item.teacher;
 
         card.appendChild(teacher);
       }
 
-      if(item.room){
-        const room=
-          document.createElement("div");
+      if (item.room) {
+        const room = document.createElement("div");
 
-        room.className="room";
-        room.textContent=item.room;
+        room.className = "room";
+        room.textContent = item.room;
 
         card.appendChild(room);
       }
 
-      card.addEventListener(
-        "click",
-        ()=>openPeriodDetails(item,day)
-      );
+      card.addEventListener("click", () => openPeriodDetails(item, day));
 
       column.appendChild(card);
     });
@@ -1337,847 +1201,558 @@ function build(){
     grid.appendChild(column);
   });
 
-  document.getElementById("weekLabel")
-    .textContent=`Week ${currentWeek}`;
+  document.getElementById("weekLabel").textContent = `Week ${currentWeek}`;
 
-  const dayLabelEl=
-    document.getElementById("dayLabel");
+  const dayLabelEl = document.getElementById("dayLabel");
 
-  dayLabelEl.textContent=
-    DAY_LABELS[mobileDay];
+  dayLabelEl.textContent = DAY_LABELS[mobileDay];
 
-  dayLabelEl.classList.toggle(
-    "today",
-    isToday(
-      mobileWeek,
-      mobileDay
-    )
-  );
+  dayLabelEl.classList.toggle("today", isToday(mobileWeek, mobileDay));
 
-  document.getElementById("dayWeekLabel")
-    .textContent=`Week ${mobileWeek}`;
+  document.getElementById("dayWeekLabel").textContent = `Week ${mobileWeek}`;
 }
 
-function updateBell(){
-  const line1=
-    document.getElementById("bellLine1");
+function updateBell() {
+  const line1 = document.getElementById("bellLine1");
 
-  const line2=
-    document.getElementById("bellLine2");
+  const line2 = document.getElementById("bellLine2");
 
-  const progressWrap=
-    document.getElementById("bellProgressWrap");
+  const progressWrap = document.getElementById("bellProgressWrap");
 
-  const progressFill=
-    document.getElementById("bellProgressFill");
+  const progressFill = document.getElementById("bellProgressFill");
 
-  const progressStart=
-    document.getElementById("bellProgressStart");
+  const progressStart = document.getElementById("bellProgressStart");
 
-  const progressEnd=
-    document.getElementById("bellProgressEnd");
+  const progressEnd = document.getElementById("bellProgressEnd");
 
-  const roomLine=
-    document.getElementById("bellRoomLine");
+  const roomLine = document.getElementById("bellRoomLine");
 
-  progressWrap.style.display="none";
-  roomLine.style.display="none";
-  roomLine.textContent="";
-  line2.style.display="";
+  progressWrap.style.display = "none";
+  roomLine.style.display = "none";
+  roomLine.textContent = "";
+  line2.style.display = "";
 
-  if(!TODAY_CYCLE_DAY){
-    line1.textContent="No school today";
-    line2.textContent="Weekend or outside term";
+  if (!TODAY_CYCLE_DAY) {
+    line1.textContent = "No school today";
+    line2.textContent = "Weekend or outside term";
     return;
   }
 
-  const {dayKey,week}=
-    dayNameToParts(TODAY_CYCLE_DAY);
+  const { dayKey, week } = dayNameToParts(TODAY_CYCLE_DAY);
 
-  const now=new Date();
+  const now = new Date();
 
-  const cur=
-    now.getHours()*60+
-    now.getMinutes();
+  const cur = now.getHours() * 60 + now.getMinutes();
 
-  const rows=
-    SCHEDULE[week]?.[dayKey]||[];
+  const rows = SCHEDULE[week]?.[dayKey] || [];
 
-  let current=null;
-  let next=null;
+  let current = null;
+  let next = null;
 
-  for(const item of rows){
-    if(!item.start||!item.end)continue;
+  for (const item of rows) {
+    if (!item.start || !item.end) continue;
 
-    const s=timeToMin(item.start);
-    const e=timeToMin(item.end);
+    const s = timeToMin(item.start);
+    const e = timeToMin(item.end);
 
-    if(cur>=s&&cur<e){
-      if(item.kind==="class"){
-        current=item;
+    if (cur >= s && cur < e) {
+      if (item.kind === "class") {
+        current = item;
       }
 
       break;
     }
 
-    if(
-      cur<s&&
-      !next&&
-      item.kind==="class"
-    ){
-      next=item;
+    if (cur < s && !next && item.kind === "class") {
+      next = item;
     }
   }
 
-  if(current){
-    line1.textContent=
-      `${current.code} — ${current.subjName}`;
+  if (current) {
+    line1.textContent = `${current.code} — ${current.subjName}`;
 
-    if(progressBarEnabled){
-      line2.style.display="none";
+    if (progressBarEnabled) {
+      line2.style.display = "none";
 
-      progressWrap.style.display="flex";
+      progressWrap.style.display = "flex";
 
-      progressStart.textContent=
-        formatTime(current.start);
+      progressStart.textContent = formatTime(current.start);
 
-      progressEnd.textContent=
-        formatTime(current.end);
+      progressEnd.textContent = formatTime(current.end);
 
-      const s=timeToMin(current.start);
-      const e=timeToMin(current.end);
-      const pct=
-        Math.min(
-          100,
-          Math.max(
-            0,
-            (cur-s)/(e-s)*100
-          )
-        );
+      const s = timeToMin(current.start);
+      const e = timeToMin(current.end);
+      const pct = Math.min(100, Math.max(0, ((cur - s) / (e - s)) * 100));
 
-      progressFill.style.width=`${pct}%`;
+      progressFill.style.width = `${pct}%`;
 
-      if(current.room){
-        roomLine.style.display="block";
-        roomLine.textContent=current.room;
+      if (current.room) {
+        roomLine.style.display = "block";
+        roomLine.textContent = current.room;
       }
-    }else{
-      line2.textContent=
-        `${formatTime(current.start)} - ${formatTime(current.end)}`+
-        `${current.room?` · ${current.room}`:""}`;
+    } else {
+      line2.textContent =
+        `${formatTime(current.start)} - ${formatTime(current.end)}` +
+        `${current.room ? ` · ${current.room}` : ""}`;
     }
 
     return;
   }
 
-  if(next){
-    line1.textContent=
-      `Next: ${next.code}`;
+  if (next) {
+    line1.textContent = `Next: ${next.code}`;
 
-    line2.textContent=
-      `from ${formatTime(next.start)}`+
-      `${next.room?` · ${next.room}`:""}`;
+    line2.textContent = `from ${formatTime(next.start)}` + `${next.room ? ` · ${next.room}` : ""}`;
 
     return;
   }
 
-  line1.textContent=
-    "No more classes today";
+  line1.textContent = "No more classes today";
 
-  line2.textContent=
-    DAY_LABELS[dayKey];
+  line2.textContent = DAY_LABELS[dayKey];
 }
 
-async function refresh(force=false){
-  refreshBtn.disabled=true;
+async function refresh(force = false) {
+  refreshBtn.disabled = true;
 
-  setStatus(
-    force?
-      "Refreshing timetable…":
-      "Loading timetable…"
-  );
+  setStatus(force ? "Refreshing timetable…" : "Loading timetable…");
 
-  const currentEmail=getCurrentEmail();
+  const currentEmail = getCurrentEmail();
 
   updateProfileDisplay(currentEmail);
 
-  try{
-    const {
-      timetable,
-      bellTimes,
-      startDate,
-      profile,
-      fetchedAt
-    }=await timetableService.loadAll(force);
+  try {
+    const { timetable, bellTimes, startDate, profile, fetchedAt } =
+      await timetableService.loadAll(force);
 
-    const cycleStart=
-      extractDateString(startDate);
+    const cycleStart = extractDateString(startDate);
 
-    const cycleStartDate=
-      cycleStart?
-        new Date(cycleStart):
-        null;
+    const cycleStartDate = cycleStart ? new Date(cycleStart) : null;
 
-    TODAY_CYCLE_DAY=
-      cycleStartDate?
-        getTimetableDay(
-          new Date(),
-          cycleStartDate
-        ):
-        null;
+    TODAY_CYCLE_DAY = cycleStartDate ? getTimetableDay(new Date(), cycleStartDate) : null;
 
-    if(TODAY_CYCLE_DAY){
-      currentWeek=
-        TODAY_CYCLE_DAY.slice(-1);
+    if (TODAY_CYCLE_DAY) {
+      currentWeek = TODAY_CYCLE_DAY.slice(-1);
 
-      const dayIdx=
-        DAY_ORDER.indexOf(
-          TODAY_CYCLE_DAY
-            .slice(0,3)
-            .toLowerCase()
-        );
+      const dayIdx = DAY_ORDER.indexOf(TODAY_CYCLE_DAY.slice(0, 3).toLowerCase());
 
-      seqIndex=
-        WEEK_ORDER.indexOf(currentWeek)*5+
-        (dayIdx>=0?dayIdx:0);
+      seqIndex = WEEK_ORDER.indexOf(currentWeek) * 5 + (dayIdx >= 0 ? dayIdx : 0);
     }
 
-    SCHEDULE=
-      normalizeTimetable(
-        timetable,
-        bellTimes
-      );
+    SCHEDULE = normalizeTimetable(timetable, bellTimes);
 
-    updateProfileDisplay(
-      currentEmail,
-      profile
-    );
+    updateProfileDisplay(currentEmail, profile);
 
     setStatus(null);
 
-    if(fetchedAt){
-      updatedAtEl.textContent=
-        `Updated ${fetchedAt.toLocaleTimeString(
-          [],
-          {
-            hour:"2-digit",
-            minute:"2-digit"
-          }
-        )}`;
+    if (fetchedAt) {
+      updatedAtEl.textContent = `Updated ${fetchedAt.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
     }
 
     build();
     updateBell();
-
-  }catch(err){
-    const message=
+  } catch (err) {
+    const message =
       err instanceof ApiError
-        ?`Unable to load timetable. ${err.message}`
-        :"Unable to load timetable. An unexpected error occurred.";
+        ? `Unable to load timetable. ${err.message}`
+        : "Unable to load timetable. An unexpected error occurred.";
 
-    setStatus(message,true);
+    setStatus(message, true);
 
-    console.error(
-      "Timetable load failed:",
-      err
-    );
-
-  }finally{
-    refreshBtn.disabled=false;
+    console.error("Timetable load failed:", err);
+  } finally {
+    refreshBtn.disabled = false;
   }
 }
 
-const emailInput=
-  document.getElementById("emailInput");
+const emailInput = document.getElementById("emailInput");
 
-const savedUsername=
-  localStorage.getItem(
-    "timetable-username"
-  );
+const savedUsername = localStorage.getItem("timetable-username");
 
-emailInput.value=
-  savedUsername||
-  CONFIG.USER_EMAIL.split("@")[0];
+emailInput.value = savedUsername || CONFIG.USER_EMAIL.split("@")[0];
 
-function submitEmail(){
-  let username=
-    emailInput.value.trim();
+function submitEmail() {
+  let username = emailInput.value.trim();
 
-  if(!username)return;
+  if (!username) return;
 
-  if(username.includes("@")){
-    username=username.split("@")[0];
+  if (username.includes("@")) {
+    username = username.split("@")[0];
   }
 
-  CONFIG.USER_EMAIL=
-    username+"@education.nsw.gov.au";
+  CONFIG.USER_EMAIL = username + "@education.nsw.gov.au";
 
-  localStorage.setItem(
-    "timetable-username",
-    username
-  );
+  localStorage.setItem("timetable-username", username);
 
   refresh(true);
 }
 
-emailInput.addEventListener(
-  "change",
-  submitEmail
-);
+emailInput.addEventListener("change", submitEmail);
 
-emailInput.addEventListener(
-  "keydown",
-  event=>{
-    if(event.key!=="Enter")return;
+emailInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
 
-    event.preventDefault();
-    submitEmail();
-  }
-);
+  event.preventDefault();
+  submitEmail();
+});
 
-refreshBtn.addEventListener(
-  "click",
-  ()=>refresh(true)
-);
+refreshBtn.addEventListener("click", () => refresh(true));
 
-document.getElementById("weekPrev")
-  .addEventListener("click",()=>{
-    currentWeek=
-      currentWeek==="A"?"B":"A";
+document.getElementById("weekPrev").addEventListener("click", () => {
+  currentWeek = currentWeek === "A" ? "B" : "A";
 
-    seqIndex=
-      WEEK_ORDER.indexOf(currentWeek)*5+
-      (seqIndex%5);
+  seqIndex = WEEK_ORDER.indexOf(currentWeek) * 5 + (seqIndex % 5);
 
-    build();
-  });
+  build();
+});
 
-document.getElementById("weekNext")
-  .addEventListener("click",()=>{
-    currentWeek=
-      currentWeek==="A"?"B":"A";
+document.getElementById("weekNext").addEventListener("click", () => {
+  currentWeek = currentWeek === "A" ? "B" : "A";
 
-    seqIndex=
-      WEEK_ORDER.indexOf(currentWeek)*5+
-      (seqIndex%5);
+  seqIndex = WEEK_ORDER.indexOf(currentWeek) * 5 + (seqIndex % 5);
 
-    build();
-  });
+  build();
+});
 
-document.getElementById("dayPrev")
-  .addEventListener("click",()=>{
-    seqIndex=(seqIndex+9)%10;
+document.getElementById("dayPrev").addEventListener("click", () => {
+  seqIndex = (seqIndex + 9) % 10;
 
-    currentWeek=
-      WEEK_ORDER[
-        Math.floor(seqIndex/5)
-      ];
+  currentWeek = WEEK_ORDER[Math.floor(seqIndex / 5)];
 
-    build();
-  });
+  build();
+});
 
-document.getElementById("dayNext")
-  .addEventListener(
-    "click",
-    ()=>{
-      seqIndex=(seqIndex+1)%10;
+document.getElementById("dayNext").addEventListener("click", () => {
+  seqIndex = (seqIndex + 1) % 10;
 
-      currentWeek=
-        WEEK_ORDER[
-          Math.floor(seqIndex/5)
-        ];
+  currentWeek = WEEK_ORDER[Math.floor(seqIndex / 5)];
 
-      build();
-    }
-  );
+  build();
+});
 
 refresh(false);
 
-setInterval(()=>{
+setInterval(() => {
   updateBell();
   build();
-},60000);
+}, 60000);
 
-const LIGHT_BG_KEY="timetable-bg-light";
-const DARK_BG_KEY="timetable-bg-dark";
+const LIGHT_BG_KEY = "timetable-bg-light";
+const DARK_BG_KEY = "timetable-bg-dark";
 
-const lightBgInput=
-  document.getElementById("lightBgInput");
+const lightBgInput = document.getElementById("lightBgInput");
 
-const darkBgInput=
-  document.getElementById("darkBgInput");
+const darkBgInput = document.getElementById("darkBgInput");
 
-const bgReset=
-  document.getElementById("bgReset");
+const bgReset = document.getElementById("bgReset");
 
-function isValidHex(value){
-  return /^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(
-    value.trim()
-  );
+function isValidHex(value) {
+  return /^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(value.trim());
 }
 
-function normalizeHex(value){
-  value=value.trim();
-  return value.startsWith("#")?value:`#${value}`;
+function normalizeHex(value) {
+  value = value.trim();
+  return value.startsWith("#") ? value : `#${value}`;
 }
 
-function applyCustomBg(){
-  const theme=
-    document.documentElement.dataset.theme==="dark"
-      ?"dark":"light";
+function applyCustomBg() {
+  const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 
-  const stored=
-    theme==="dark"
-      ?localStorage.getItem(DARK_BG_KEY)
-      :localStorage.getItem(LIGHT_BG_KEY);
+  const stored =
+    theme === "dark" ? localStorage.getItem(DARK_BG_KEY) : localStorage.getItem(LIGHT_BG_KEY);
 
-  if(stored&&isValidHex(stored)){
-    document.body.style.backgroundColor=
-      normalizeHex(stored);
-  }else{
-    document.body.style.backgroundColor="";
+  if (stored && isValidHex(stored)) {
+    document.body.style.backgroundColor = normalizeHex(stored);
+  } else {
+    document.body.style.backgroundColor = "";
   }
 }
 
-const savedLightBg=
-  localStorage.getItem(LIGHT_BG_KEY);
+const savedLightBg = localStorage.getItem(LIGHT_BG_KEY);
 
-const savedDarkBg=
-  localStorage.getItem(DARK_BG_KEY);
+const savedDarkBg = localStorage.getItem(DARK_BG_KEY);
 
-if(savedLightBg)lightBgInput.value=savedLightBg;
-if(savedDarkBg)darkBgInput.value=savedDarkBg;
+if (savedLightBg) lightBgInput.value = savedLightBg;
+if (savedDarkBg) darkBgInput.value = savedDarkBg;
 
-lightBgInput.addEventListener("input",()=>{
-  const value=lightBgInput.value.trim();
+lightBgInput.addEventListener("input", () => {
+  const value = lightBgInput.value.trim();
 
-  if(!value){
+  if (!value) {
     localStorage.removeItem(LIGHT_BG_KEY);
     applyCustomBg();
     return;
   }
 
-  if(!isValidHex(value))return;
+  if (!isValidHex(value)) return;
 
-  localStorage.setItem(LIGHT_BG_KEY,value);
+  localStorage.setItem(LIGHT_BG_KEY, value);
   applyCustomBg();
 });
 
-darkBgInput.addEventListener("input",()=>{
-  const value=darkBgInput.value.trim();
+darkBgInput.addEventListener("input", () => {
+  const value = darkBgInput.value.trim();
 
-  if(!value){
+  if (!value) {
     localStorage.removeItem(DARK_BG_KEY);
     applyCustomBg();
     return;
   }
 
-  if(!isValidHex(value))return;
+  if (!isValidHex(value)) return;
 
-  localStorage.setItem(DARK_BG_KEY,value);
+  localStorage.setItem(DARK_BG_KEY, value);
   applyCustomBg();
 });
 
-bgReset.addEventListener("click",()=>{
+bgReset.addEventListener("click", () => {
   localStorage.removeItem(LIGHT_BG_KEY);
   localStorage.removeItem(DARK_BG_KEY);
-  lightBgInput.value="";
-  darkBgInput.value="";
+  lightBgInput.value = "";
+  darkBgInput.value = "";
   applyCustomBg();
 });
 
-const themeSwitch=
-  document.getElementById(
-    "themeSwitch"
-  );
+const themeSwitch = document.getElementById("themeSwitch");
 
-const mq=
-  window.matchMedia(
-    "(prefers-color-scheme: dark)"
-  );
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
 
-function applyTheme(theme){
-  document.documentElement.dataset.theme=
-    theme;
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
 
-  const isDark=theme==="dark";
+  const isDark = theme === "dark";
 
-  themeSwitch.classList.toggle(
-    "on",
-    isDark
-  );
+  themeSwitch.classList.toggle("on", isDark);
 
-  themeSwitch.setAttribute(
-    "aria-checked",
-    String(isDark)
-  );
+  themeSwitch.setAttribute("aria-checked", String(isDark));
 
-  if(typeof applyCustomBg==="function"){
+  if (typeof applyCustomBg === "function") {
     applyCustomBg();
   }
 }
 
-const stored=
-  localStorage.getItem(
-    "timetable-theme"
-  );
+const stored = localStorage.getItem("timetable-theme");
 
-applyTheme(stored||"light");
+applyTheme(stored || "light");
 
-mq.addEventListener(
-  "change",
-  event=>{
-    if(
-      !localStorage.getItem(
-        "timetable-theme"
-      )
-    ){
-      applyTheme(
-        event.matches?
-          "dark":
-          "light"
-      );
-    }
+mq.addEventListener("change", (event) => {
+  if (!localStorage.getItem("timetable-theme")) {
+    applyTheme(event.matches ? "dark" : "light");
   }
-);
+});
 
-themeSwitch.addEventListener(
-  "click",
-  ()=>{
-    const next=
-      document.documentElement
-        .dataset.theme==="dark"
-        ?"light"
-        :"dark";
+themeSwitch.addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
 
-    localStorage.setItem(
-      "timetable-theme",
-      next
-    );
+  localStorage.setItem("timetable-theme", next);
 
-    applyTheme(next);
-  }
-);
+  applyTheme(next);
+});
 
-const outlineSwitch=
-  document.getElementById(
-    "outlineSwitch"
-  );
+const outlineSwitch = document.getElementById("outlineSwitch");
 
-const OUTLINE_STORAGE_KEY=
-  "timetable-outline-colors";
+const OUTLINE_STORAGE_KEY = "timetable-outline-colors";
 
-let outlineByColor=
-  localStorage.getItem(
-    OUTLINE_STORAGE_KEY
-  )!=="0";
+let outlineByColor = localStorage.getItem(OUTLINE_STORAGE_KEY) !== "0";
 
-function applyOutlineSetting(){
-  grid.dataset.outlineColors=
-    outlineByColor?"1":"0";
+function applyOutlineSetting() {
+  grid.dataset.outlineColors = outlineByColor ? "1" : "0";
 
-  outlineSwitch.classList.toggle(
-    "on",
-    outlineByColor
-  );
+  outlineSwitch.classList.toggle("on", outlineByColor);
 
-  outlineSwitch.setAttribute(
-    "aria-checked",
-    String(outlineByColor)
-  );
+  outlineSwitch.setAttribute("aria-checked", String(outlineByColor));
 }
 
 applyOutlineSetting();
 
-outlineSwitch.addEventListener(
-  "click",
-  ()=>{
-    outlineByColor=!outlineByColor;
+outlineSwitch.addEventListener("click", () => {
+  outlineByColor = !outlineByColor;
 
-    localStorage.setItem(
-      OUTLINE_STORAGE_KEY,
-      outlineByColor?"1":"0"
-    );
+  localStorage.setItem(OUTLINE_STORAGE_KEY, outlineByColor ? "1" : "0");
 
-    applyOutlineSetting();
-  }
-);
+  applyOutlineSetting();
+});
 
-const progressSwitch=
-  document.getElementById(
-    "progressSwitch"
-  );
+const progressSwitch = document.getElementById("progressSwitch");
 
-const PROGRESS_STORAGE_KEY=
-  "timetable-progress-bar";
+const PROGRESS_STORAGE_KEY = "timetable-progress-bar";
 
-let progressBarEnabled=
-  localStorage.getItem(
-    PROGRESS_STORAGE_KEY
-  )!=="0";
+let progressBarEnabled = localStorage.getItem(PROGRESS_STORAGE_KEY) !== "0";
 
-function applyProgressSetting(){
-  progressSwitch.classList.toggle(
-    "on",
-    progressBarEnabled
-  );
+function applyProgressSetting() {
+  progressSwitch.classList.toggle("on", progressBarEnabled);
 
-  progressSwitch.setAttribute(
-    "aria-checked",
-    String(progressBarEnabled)
-  );
+  progressSwitch.setAttribute("aria-checked", String(progressBarEnabled));
 }
 
 applyProgressSetting();
 
-progressSwitch.addEventListener(
-  "click",
-  ()=>{
-    progressBarEnabled=!progressBarEnabled;
+progressSwitch.addEventListener("click", () => {
+  progressBarEnabled = !progressBarEnabled;
 
-    localStorage.setItem(
-      PROGRESS_STORAGE_KEY,
-      progressBarEnabled?"1":"0"
-    );
+  localStorage.setItem(PROGRESS_STORAGE_KEY, progressBarEnabled ? "1" : "0");
 
-    applyProgressSetting();
-    updateBell();
-  }
-);
+  applyProgressSetting();
+  updateBell();
+});
 
-function getStudents(raw){
-  const value=
-    raw.Students??
-    raw.students??
-    raw.StudentList??
-    raw.studentList??
-    raw.Enrolments??
-    raw.enrolments??
-    raw.ClassStudents??
-    raw.classStudents??
+function getStudents(raw) {
+  const value =
+    raw.Students ??
+    raw.students ??
+    raw.StudentList ??
+    raw.studentList ??
+    raw.Enrolments ??
+    raw.enrolments ??
+    raw.ClassStudents ??
+    raw.classStudents ??
     null;
 
-  if(!Array.isArray(value)||!value.length)return null;
+  if (!Array.isArray(value) || !value.length) return null;
 
-  return value.map(s=>{
-    if(typeof s==="string")return s;
+  return value.map((s) => {
+    if (typeof s === "string") return s;
 
-    return(
-      s.FullName||s.fullName||
-      [
-        s.FirstName||s.firstName,
-        s.LastName||s.lastName
-      ].filter(Boolean).join(" ")||
-      s.Name||s.name||
+    return (
+      s.FullName ||
+      s.fullName ||
+      [s.FirstName || s.firstName, s.LastName || s.lastName].filter(Boolean).join(" ") ||
+      s.Name ||
+      s.name ||
       "Unknown student"
     );
   });
 }
 
-const periodOverlay=
-  document.getElementById("periodOverlay");
+const periodOverlay = document.getElementById("periodOverlay");
 
-const periodClose=
-  document.getElementById("periodClose");
+const periodClose = document.getElementById("periodClose");
 
-const periodPopupSubtitle=
-  document.getElementById("periodPopupSubtitle");
+const periodPopupSubtitle = document.getElementById("periodPopupSubtitle");
 
-const periodPopupBody=
-  document.getElementById("periodPopupBody");
+const periodPopupBody = document.getElementById("periodPopupBody");
 
-function detailRow(label,value){
-  return`<div class="detailRow"><div class="detailLabel">${label}</div><div class="detailValue">${value}</div></div>`;
+function detailRow(label, value) {
+  return `<div class="detailRow"><div class="detailLabel">${label}</div><div class="detailValue">${value}</div></div>`;
 }
 
-function openPeriodDetails(item,dayKey){
-  periodPopupSubtitle.textContent=
-    `${DAY_LABELS[dayKey]} · Week ${currentWeek}`;
+function openPeriodDetails(item, dayKey) {
+  periodPopupSubtitle.textContent = `${DAY_LABELS[dayKey]} · Week ${currentWeek}`;
 
-  let html="";
+  let html = "";
 
-  html+=detailRow("Subject",item.subjName||"");
-  html+=detailRow("Class code",item.code||"");
+  html += detailRow("Subject", item.subjName || "");
+  html += detailRow("Class code", item.code || "");
 
-  if(item.periodNumber)
-    html+=detailRow("Period",item.periodNumber);
+  if (item.periodNumber) html += detailRow("Period", item.periodNumber);
 
-  html+=detailRow(
-    "Time",
-    `${formatTime(item.start)} - ${formatTime(item.end)}`
-  );
+  html += detailRow("Time", `${formatTime(item.start)} - ${formatTime(item.end)}`);
 
-  if(item.teacher)
-    html+=detailRow("Teacher",item.teacher);
+  if (item.teacher) html += detailRow("Teacher", item.teacher);
 
-  if(item.room)
-    html+=detailRow("Room",item.room);
+  if (item.room) html += detailRow("Room", item.room);
 
-  const students=getStudents(item.raw||{});
+  const students = getStudents(item.raw || {});
 
-  if(students){
-    html+=detailRow(
-      "Students",
-      students.length
-    );
+  if (students) {
+    html += detailRow("Students", students.length);
 
-    html+=`<div class="detailStudentsNote">${students.join(", ")}</div>`;
-  }else{
-    html+=`<div class="detailStudentsNote">Student list is not provided by the school timetable API.</div>`;
+    html += `<div class="detailStudentsNote">${students.join(", ")}</div>`;
+  } else {
+    html += `<div class="detailStudentsNote">Student list is not provided by the school timetable API.</div>`;
   }
 
-  periodPopupBody.innerHTML=html;
+  periodPopupBody.innerHTML = html;
 
   periodOverlay.classList.add("open");
-  document.body.style.overflow="hidden";
+  document.body.style.overflow = "hidden";
 }
 
-function closePeriodDetails(){
+function closePeriodDetails() {
   periodOverlay.classList.remove("open");
-  document.body.style.overflow="";
+  document.body.style.overflow = "";
 }
 
-periodClose.addEventListener(
-  "click",
-  closePeriodDetails
-);
+periodClose.addEventListener("click", closePeriodDetails);
 
-periodOverlay.addEventListener(
-  "click",
-  event=>{
-    if(event.target===periodOverlay){
-      closePeriodDetails();
-    }
+periodOverlay.addEventListener("click", (event) => {
+  if (event.target === periodOverlay) {
+    closePeriodDetails();
   }
-);
+});
 
-document.addEventListener(
-  "keydown",
-  event=>{
-    if(
-      event.key==="Escape"&&
-      periodOverlay.classList.contains("open")
-    ){
-      closePeriodDetails();
-    }
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && periodOverlay.classList.contains("open")) {
+    closePeriodDetails();
   }
-);
+});
 
-const infoBtn=
-  document.getElementById(
-    "infoToggle"
-  );
+const infoBtn = document.getElementById("infoToggle");
 
-const infoOverlay=
-  document.getElementById(
-    "infoOverlay"
-  );
+const infoOverlay = document.getElementById("infoOverlay");
 
-const infoClose=
-  document.getElementById(
-    "infoClose"
-  );
+const infoClose = document.getElementById("infoClose");
 
-const infoTextarea=
-  document.getElementById(
-    "infoTextarea"
-  );
+const infoTextarea = document.getElementById("infoTextarea");
 
-const infoClear=
-  document.getElementById(
-    "infoClear"
-  );
+const infoClear = document.getElementById("infoClear");
 
-const infoSaved=
-  document.getElementById(
-    "infoSaved"
-  );
+const infoSaved = document.getElementById("infoSaved");
 
-const INFO_STORAGE_KEY=
-  "timetable-extra-information";
+const INFO_STORAGE_KEY = "timetable-extra-information";
 
-const savedInfo=
-  localStorage.getItem(
-    INFO_STORAGE_KEY
-  );
+const savedInfo = localStorage.getItem(INFO_STORAGE_KEY);
 
-if(savedInfo!==null){
-  infoTextarea.value=savedInfo;
+if (savedInfo !== null) {
+  infoTextarea.value = savedInfo;
 }
 
-function openInfoPopup(){
+function openInfoPopup() {
   infoOverlay.classList.add("open");
-  document.body.style.overflow="hidden";
+  document.body.style.overflow = "hidden";
 
-  setTimeout(
-    ()=>infoTextarea.focus(),
-    150
-  );
+  setTimeout(() => infoTextarea.focus(), 150);
 }
 
-function closeInfoPopup(){
+function closeInfoPopup() {
   infoOverlay.classList.remove("open");
-  document.body.style.overflow="";
+  document.body.style.overflow = "";
 }
 
-infoBtn.addEventListener(
-  "click",
-  openInfoPopup
-);
+infoBtn.addEventListener("click", openInfoPopup);
 
-infoClose.addEventListener(
-  "click",
-  closeInfoPopup
-);
+infoClose.addEventListener("click", closeInfoPopup);
 
-infoOverlay.addEventListener(
-  "click",
-  event=>{
-    if(event.target===infoOverlay){
-      closeInfoPopup();
-    }
+infoOverlay.addEventListener("click", (event) => {
+  if (event.target === infoOverlay) {
+    closeInfoPopup();
   }
-);
+});
 
-document.addEventListener(
-  "keydown",
-  event=>{
-    if(
-      event.key==="Escape"&&
-      infoOverlay.classList.contains("open")
-    ){
-      closeInfoPopup();
-    }
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && infoOverlay.classList.contains("open")) {
+    closeInfoPopup();
   }
-);
+});
 
-infoTextarea.addEventListener(
-  "input",
-  ()=>{
-    localStorage.setItem(
-      INFO_STORAGE_KEY,
-      infoTextarea.value
-    );
+infoTextarea.addEventListener("input", () => {
+  localStorage.setItem(INFO_STORAGE_KEY, infoTextarea.value);
 
-    infoSaved.textContent=
-      "Saved automatically";
-  }
-);
+  infoSaved.textContent = "Saved automatically";
+});
 
-infoClear.addEventListener(
-  "click",
-  ()=>{
-    if(!confirm("Clear all information?"))return;
+infoClear.addEventListener("click", () => {
+  if (!confirm("Clear all information?")) return;
 
-    infoTextarea.value="";
+  infoTextarea.value = "";
 
-    localStorage.removeItem(
-      INFO_STORAGE_KEY
-    );
+  localStorage.removeItem(INFO_STORAGE_KEY);
 
-    infoSaved.textContent="Cleared";
-  }
-);
+  infoSaved.textContent = "Cleared";
+});
 </script>
 </body>
 </html>
