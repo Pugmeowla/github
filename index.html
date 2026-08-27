@@ -231,6 +231,7 @@ If anything breaks or if you have any suggestions for me to add, please contanct
 <span class="infoSaved" id="infoSaved"></span>
 <div class="infoFooterActions">
 <a class="infoRepoLink" id="infoRepoLink" href="https://github.com/Pugmeowla/timetable" target="_blank" rel="noopener noreferrer" title="View source and README on GitHub">Github</a>
+<button class="infoClear" id="exportCalendarBtn" type="button" title="Download the currently shown timetable (Week A and Week B) as an .ics calendar file">Export .ics</button>
 <button class="infoClear" id="infoClear" type="button">Clear</button>
 </div>
 </div>
@@ -963,6 +964,7 @@ let SCHEDULE = {
 };
 
 let TODAY_CYCLE_DAY = null;
+let CYCLE_START_DATE = null;
 let currentWeek = "A";
 let seqIndex = 0;
 
@@ -1338,6 +1340,8 @@ async function refresh(force = false) {
     const cycleStart = extractDateString(startDate);
 
     const cycleStartDate = cycleStart ? new Date(cycleStart) : null;
+
+    CYCLE_START_DATE = cycleStartDate;
 
     TODAY_CYCLE_DAY = cycleStartDate ? getTimetableDay(new Date(), cycleStartDate) : null;
 
@@ -1762,6 +1766,211 @@ infoClear.addEventListener("click", () => {
   localStorage.removeItem(INFO_STORAGE_KEY);
 
   infoSaved.textContent = "Cleared";
+});
+
+/* ---------- Export as calendar (.ics) ---------- */
+
+function icsEscape(value) {
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function icsFold(line) {
+  // RFC5545 line folding at 75 octets, continuation lines start with a space
+  if (line.length <= 75) return line;
+
+  let result = "";
+  let remaining = line;
+
+  while (remaining.length > 75) {
+    result += remaining.slice(0, 75) + "\r\n ";
+    remaining = remaining.slice(75);
+  }
+
+  return result + remaining;
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function formatIcsDate(date) {
+  return (
+    date.getFullYear() +
+    pad2(date.getMonth() + 1) +
+    pad2(date.getDate()) +
+    "T" +
+    pad2(date.getHours()) +
+    pad2(date.getMinutes()) +
+    pad2(date.getSeconds())
+  );
+}
+
+function formatIcsDateUTC(date) {
+  return (
+    date.getUTCFullYear() +
+    pad2(date.getUTCMonth() + 1) +
+    pad2(date.getUTCDate()) +
+    "T" +
+    pad2(date.getUTCHours()) +
+    pad2(date.getUTCMinutes()) +
+    pad2(date.getUTCSeconds()) +
+    "Z"
+  );
+}
+
+// Find the first calendar date (on/after the cycle start) whose timetable
+// cycle-day code matches each of the 10 MonA..FriB slots, so recurring
+// events can be anchored to the correct real-world date and week parity.
+function computeAnchorDates(cycleStartDate) {
+  const anchors = {};
+
+  if (!cycleStartDate) return anchors;
+
+  const cursor = new Date(
+    cycleStartDate.getFullYear(),
+    cycleStartDate.getMonth(),
+    cycleStartDate.getDate(),
+  );
+
+  // Scan up to ~4 school-cycles worth of calendar days to be safe.
+  for (let i = 0; i < 42 && Object.keys(anchors).length < CYCLE_DAYS.length; i++) {
+    const cycleDay = getTimetableDay(cursor, cycleStartDate);
+
+    if (cycleDay && !anchors[cycleDay]) {
+      anchors[cycleDay] = new Date(cursor);
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return anchors;
+}
+
+function buildIcsCalendar() {
+  const anchors = computeAnchorDates(CYCLE_START_DATE);
+
+  // Fallback: if we don't know the real cycle start date, anchor Week A to
+  // the coming Monday and Week B to the Monday after, so the file is still
+  // usable (just without guaranteed real-world week-parity alignment).
+  const today = new Date();
+  const todayDow = today.getDay(); // 0=Sun..6=Sat
+  const diffToMonday = todayDow === 0 ? -6 : 1 - todayDow;
+  const fallbackMonday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMonday);
+
+  const lines = [];
+
+  lines.push("BEGIN:VCALENDAR");
+  lines.push("VERSION:2.0");
+  lines.push("PRODID:-//Andre Kwok Timetable//Export//EN");
+  lines.push("CALSCALE:GREGORIAN");
+  lines.push("METHOD:PUBLISH");
+  lines.push(icsFold(`X-WR-CALNAME:${icsEscape(document.getElementById("profileName").textContent + " Timetable")}`));
+
+  const now = new Date();
+  const dtstamp = formatIcsDateUTC(now);
+
+  // Recur for roughly a school year (52 weeks) from each anchor date.
+  const untilDate = new Date(now);
+  untilDate.setFullYear(untilDate.getFullYear() + 1);
+  const until = formatIcsDateUTC(untilDate);
+
+  let eventCount = 0;
+
+  WEEK_ORDER.forEach((week) => {
+    DAY_ORDER.forEach((day) => {
+      const cycleCode = day.charAt(0).toUpperCase() + day.slice(1) + week;
+
+      let anchor = anchors[cycleCode];
+
+      if (!anchor) {
+        // Fallback anchoring when no cycle start date is known
+        const dayIndex = DAY_ORDER.indexOf(day); // 0=mon..4=fri
+        const weekOffset = WEEK_ORDER.indexOf(week) * 7;
+        anchor = new Date(fallbackMonday);
+        anchor.setDate(fallbackMonday.getDate() + weekOffset + dayIndex);
+      }
+
+      const rows = SCHEDULE[week]?.[day] || [];
+
+      rows.forEach((item, idx) => {
+        if (item.kind !== "class" || !item.start || !item.end) return;
+
+        const startMin = timeToMin(item.start);
+        const endMin = timeToMin(item.end);
+
+        if (endMin <= startMin) return;
+
+        const dtStart = new Date(anchor);
+        dtStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+
+        const dtEnd = new Date(anchor);
+        dtEnd.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
+
+        const uid = `${cycleCode}-${idx}-${item.code || "class"}-${item.periodNumber || ""}@andrekwok-timetable`
+          .toLowerCase()
+          .replace(/[^a-z0-9@.-]+/g, "-");
+
+        const summary = `${item.code || item.subjName}${item.subjName && item.code !== item.subjName ? " - " + item.subjName : ""}`;
+
+        const descriptionParts = [];
+        if (item.teacher) descriptionParts.push(`Teacher: ${item.teacher}`);
+        if (item.periodNumber) descriptionParts.push(`Period: ${item.periodNumber}`);
+        descriptionParts.push(`Week ${week}`);
+
+        lines.push("BEGIN:VEVENT");
+        lines.push(`UID:${uid}`);
+        lines.push(`DTSTAMP:${dtstamp}`);
+        lines.push(`DTSTART:${formatIcsDate(dtStart)}`);
+        lines.push(`DTEND:${formatIcsDate(dtEnd)}`);
+        lines.push(`RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=${until}`);
+        lines.push(icsFold(`SUMMARY:${icsEscape(summary)}`));
+        if (item.room) lines.push(icsFold(`LOCATION:${icsEscape(item.room)}`));
+        lines.push(icsFold(`DESCRIPTION:${icsEscape(descriptionParts.join("\\n"))}`));
+        lines.push("END:VEVENT");
+
+        eventCount++;
+      });
+    });
+  });
+
+  lines.push("END:VCALENDAR");
+
+  return { ics: lines.join("\r\n"), eventCount };
+}
+
+function downloadIcsFile(content, filename) {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("exportCalendarBtn").addEventListener("click", () => {
+  const { ics, eventCount } = buildIcsCalendar();
+
+  if (eventCount === 0) {
+    infoSaved.textContent = "No classes to export yet — load a timetable first.";
+    return;
+  }
+
+  const nameForFile = (document.getElementById("profileName").textContent || "timetable")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
+
+  downloadIcsFile(ics, `${nameForFile}-timetable.ics`);
+
+  infoSaved.textContent = `Exported ${eventCount} class${eventCount === 1 ? "" : "es"} to calendar file`;
 });
 </script>
 </body>
