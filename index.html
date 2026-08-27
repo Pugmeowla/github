@@ -1659,7 +1659,6 @@ function openPeriodDetails(item, dayKey) {
 
   let html = "";
 
-  html += detailRow("Subject", item.subjName || "");
   html += detailRow("Class code", item.code || "");
 
   if (item.periodNumber) html += detailRow("Period", item.periodNumber);
@@ -1672,13 +1671,7 @@ function openPeriodDetails(item, dayKey) {
 
   const students = getStudents(item.raw || {});
 
-  if (students) {
-    html += detailRow("Students", students.length);
-
-    html += `<div class="detailStudentsNote">${students.join(", ")}</div>`;
-  } else {
-    html += `<div class="detailStudentsNote">Student list is not provided by the school timetable API.</div>`;
-  }
+  
 
   periodPopupBody.innerHTML = html;
 
