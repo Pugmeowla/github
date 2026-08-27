@@ -18,7 +18,8 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em;color:var(--ink)}
 .sub{font-size:13px;color:var(--ink-soft);margin-top:3px;font-weight:400}
 .emailInputWrap{margin-top:10px}
-#emailInput{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--glass-hi);color:var(--ink);width:260px;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
+#emailInput{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:10px;border:1.5px solid rgba(29,29,31,.25);background:rgba(255,255,255,.9);color:var(--ink);width:260px;outline:none;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:border-color .2s ease,box-shadow .2s ease}
+[data-theme=dark] #emailInput{border:1px solid var(--line);background:var(--glass-hi);box-shadow:none}
 #emailInput:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(10,132,255,.12)}
 #emailInput::placeholder{color:var(--ink-faint)}
 .emailHint{font-size:10.5px;color:var(--ink-faint);margin-top:5px}
@@ -26,6 +27,11 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .bell .eyebrow2{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--accent);margin-bottom:3px}
 .bell .line1{font-size:15px;font-weight:600;letter-spacing:-.01em}
 .bell .line2{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.bellProgressWrap{display:flex;align-items:center;gap:8px;margin-top:4px}
+.bellProgressTime{font-size:10.5px;font-weight:600;color:var(--accent);flex-shrink:0}
+.bellProgressTrack{flex:1;height:5px;border-radius:999px;background:rgba(10,132,255,.16);overflow:hidden}
+.bellProgressFill{height:100%;width:0%;background:var(--accent);border-radius:999px;transition:width 1s linear}
+.bellRoomLine{font-size:11px;color:var(--ink-soft);margin-top:3px}
 .refreshRow{display:flex;align-items:center;gap:8px;margin-top:8px}
 .refreshBtn{font-family:inherit;font-size:11px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--line);border-radius:10px;padding:4px 9px;cursor:pointer;transition:background .2s ease,transform .2s ease}
 .refreshBtn:hover{background:var(--glass-hi)}
@@ -60,7 +66,8 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .cls .teacher{margin-top:3px}
 .cls .room{margin-top:auto}
 .cls.now{outline:2px solid var(--accent);outline-offset:0}
-.grid[data-outline-colors="1"] .cls:not(.now){outline:2.5px solid var(--c,var(--accent));outline-offset:0}
+.grid[data-outline-colors="1"] .cls:not(.now){outline:2.5px solid var(--c,var(--accent));outline-offset:0;background:color-mix(in srgb,var(--c,var(--accent)) 18%,var(--glass-hi))}
+.cls{cursor:pointer}
 .break-card{position:absolute;left:0;right:0;margin-top:3px;margin-bottom:3px;display:flex;align-items:center;justify-content:center;background:var(--break-bg);border:1px dashed var(--break-line);border-radius:16px;color:var(--ink-faint)}
 .break-card .tag{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .header-right{display:flex;align-items:center;gap:10px}
@@ -104,6 +111,17 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .infoClear:hover,.infoRepoLink:hover{background:var(--glass-hi)}
 .infoClear:active,.infoRepoLink:active{transform:scale(.96)}
 .infoFooterActions{display:flex;align-items:center;gap:8px}
+.settingsRowBg{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.bgField{display:flex;flex-direction:column;gap:4px}
+.bgField label{font-size:10.5px;font-weight:600;color:var(--ink-soft)}
+.hexInput{width:96px;font-family:inherit;font-size:12px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--glass);color:var(--ink);outline:none;transition:border-color .2s ease}
+.hexInput:focus{border-color:var(--accent)}
+.bgResetBtn{margin-left:auto}
+.detailRow{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--break-line)}
+.detailRow:last-child{border-bottom:none}
+.detailLabel{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint)}
+.detailValue{font-size:13.5px;color:var(--ink);text-align:right}
+.detailStudentsNote{font-size:12px;color:var(--ink-faint);margin-top:6px;font-style:italic}
 
 @media(max-width:760px){
   .header-buttons{flex-direction:row}
@@ -142,6 +160,12 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div class="eyebrow2">NOW</div>
 <div class="line1" id="bellLine1">Loading…</div>
 <div class="line2" id="bellLine2"></div>
+<div class="bellProgressWrap" id="bellProgressWrap" style="display:none">
+<span class="bellProgressTime" id="bellProgressStart"></span>
+<div class="bellProgressTrack"><div class="bellProgressFill" id="bellProgressFill"></div></div>
+<span class="bellProgressTime" id="bellProgressEnd"></span>
+</div>
+<div class="bellRoomLine" id="bellRoomLine"></div>
 <div class="refreshRow">
 <button class="refreshBtn" id="refreshBtn" title="Refresh timetable">↻ Refresh</button>
 <span class="updatedAt" id="updatedAt"></span>
@@ -174,6 +198,21 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div><div class="settingsLabel">Colour outlines</div><div class="settingsHint">Outline each period in its subject colour</div></div>
 <div class="switch" id="outlineSwitch" role="switch" aria-checked="false" aria-label="Toggle colour outlines"><div class="knob"></div></div>
 </div>
+<div class="settingsRow">
+<div><div class="settingsLabel">Progress bar</div><div class="settingsHint">Show a progress bar in the NOW box instead of a time range</div></div>
+<div class="switch" id="progressSwitch" role="switch" aria-checked="true" aria-label="Toggle progress bar"><div class="knob"></div></div>
+</div>
+<div class="settingsRow settingsRowBg">
+<div class="bgField">
+<label for="lightBgInput">Light BG</label>
+<input type="text" id="lightBgInput" class="hexInput" placeholder="#ffffff" maxlength="7">
+</div>
+<div class="bgField">
+<label for="darkBgInput">Dark BG</label>
+<input type="text" id="darkBgInput" class="hexInput" placeholder="#101114" maxlength="7">
+</div>
+<button class="infoClear bgResetBtn" id="bgReset" type="button">Reset</button>
+</div>
 </div>
 <div class="settingsHeading">Notes</div>
 <textarea class="infoTextarea" id="infoTextarea" placeholder="Hi its me Andre Kwok, this is my timetable replacement I made because the original one looks so bad and the amazing OGGYP Timetable (Which inspired mine) is no longer available. This was made with a lot of love, dedication and too much vibe-coding.
@@ -191,6 +230,19 @@ If anything breaks or if you have any suggestions for me to add, please contanct
 </div>
 </div>
 </div>
+</div>
+</div>
+
+<div class="infoOverlay" id="periodOverlay" role="dialog" aria-modal="true" aria-labelledby="periodPopupTitle">
+<div class="infoPopup">
+<div class="infoPopupHeader">
+<div>
+<div class="infoPopupTitle" id="periodPopupTitle">Period details</div>
+<div class="infoPopupSubtitle" id="periodPopupSubtitle"></div>
+</div>
+<button class="infoClose" id="periodClose" aria-label="Close period details">×</button>
+</div>
+<div class="infoPopupBody" id="periodPopupBody"></div>
 </div>
 </div>
 
@@ -913,6 +965,34 @@ function normalizeTimetable(rawTimetable,bellTimes){
           timeToMin(a.start)-
           timeToMin(b.start)
       );
+
+      const withGaps=[];
+
+      for(let i=0;i<rows.length;i++){
+        withGaps.push(rows[i]);
+
+        const cur=rows[i];
+        const nxt=rows[i+1];
+
+        if(
+          cur&&nxt&&
+          cur.end&&nxt.start
+        ){
+          const gap=
+            timeToMin(nxt.start)-
+            timeToMin(cur.end);
+
+          if(gap>=5){
+            withGaps.push({
+              kind:"free",
+              start:cur.end,
+              end:nxt.start
+            });
+          }
+        }
+      }
+
+      grouped[week][day]=withGaps;
     }
   }
 
@@ -1083,21 +1163,32 @@ function build(){
     "14:50"
   ];
 
-  [...new Set(labels)].forEach(time=>{
-    if(
-      timeToMin(time)<TIMELINE_START||
-      timeToMin(time)>TIMELINE_END
-    )return;
+  const MIN_LABEL_GAP=15;
+  let lastLabelTop=-Infinity;
 
-    const label=document.createElement("div");
+  [...new Set(labels)]
+    .filter(time=>
+      timeToMin(time)>=TIMELINE_START&&
+      timeToMin(time)<=TIMELINE_END
+    )
+    .sort((a,b)=>timeToMin(a)-timeToMin(b))
+    .forEach(time=>{
+      let top=timelineTop(time);
 
-    label.className="time-label";
-    label.style.top=
-      `${timelineTop(time)}px`;
-    label.textContent=time;
+      if(top-lastLabelTop<MIN_LABEL_GAP){
+        top=lastLabelTop+MIN_LABEL_GAP;
+      }
 
-    timeColumn.appendChild(label);
-  });
+      lastLabelTop=top;
+
+      const label=document.createElement("div");
+
+      label.className="time-label";
+      label.style.top=`${top}px`;
+      label.textContent=time;
+
+      timeColumn.appendChild(label);
+    });
 
   grid.appendChild(timeColumn);
 
@@ -1172,6 +1263,7 @@ function build(){
         if(item.kind==="lunch")label="Lunch";
         if(item.kind==="break")label="Recess";
         if(item.kind==="assembly")label="Assembly";
+        if(item.kind==="free")label="Free period";
 
         breakCard.innerHTML=
           `<span class="tag">${label}</span>`;
@@ -1233,6 +1325,11 @@ function build(){
         card.appendChild(room);
       }
 
+      card.addEventListener(
+        "click",
+        ()=>openPeriodDetails(item,day)
+      );
+
       column.appendChild(card);
     });
 
@@ -1266,6 +1363,26 @@ function updateBell(){
 
   const line2=
     document.getElementById("bellLine2");
+
+  const progressWrap=
+    document.getElementById("bellProgressWrap");
+
+  const progressFill=
+    document.getElementById("bellProgressFill");
+
+  const progressStart=
+    document.getElementById("bellProgressStart");
+
+  const progressEnd=
+    document.getElementById("bellProgressEnd");
+
+  const roomLine=
+    document.getElementById("bellRoomLine");
+
+  progressWrap.style.display="none";
+  roomLine.style.display="none";
+  roomLine.textContent="";
+  line2.style.display="";
 
   if(!TODAY_CYCLE_DAY){
     line1.textContent="No school today";
@@ -1315,9 +1432,39 @@ function updateBell(){
     line1.textContent=
       `${current.code} — ${current.subjName}`;
 
-    line2.textContent=
-      `until ${formatTime(current.end)}`+
-      `${current.room?` · ${current.room}`:""}`;
+    if(progressBarEnabled){
+      line2.style.display="none";
+
+      progressWrap.style.display="flex";
+
+      progressStart.textContent=
+        formatTime(current.start);
+
+      progressEnd.textContent=
+        formatTime(current.end);
+
+      const s=timeToMin(current.start);
+      const e=timeToMin(current.end);
+      const pct=
+        Math.min(
+          100,
+          Math.max(
+            0,
+            (cur-s)/(e-s)*100
+          )
+        );
+
+      progressFill.style.width=`${pct}%`;
+
+      if(current.room){
+        roomLine.style.display="block";
+        roomLine.textContent=current.room;
+      }
+    }else{
+      line2.textContent=
+        `${formatTime(current.start)} - ${formatTime(current.end)}`+
+        `${current.room?` · ${current.room}`:""}`;
+    }
 
     return;
   }
@@ -1451,20 +1598,6 @@ emailInput.value=
   savedUsername||
   CONFIG.USER_EMAIL.split("@")[0];
 
-emailInput.addEventListener(
-  "input",
-  event=>{
-    const username=
-      event.target.value.trim();
-
-    updateProfileDisplay(
-      username?
-        username+"@education.nsw.gov.au":
-        CONFIG.USER_EMAIL
-    );
-  }
-);
-
 function submitEmail(){
   let username=
     emailInput.value.trim();
@@ -1564,6 +1697,94 @@ setInterval(()=>{
   build();
 },60000);
 
+const LIGHT_BG_KEY="timetable-bg-light";
+const DARK_BG_KEY="timetable-bg-dark";
+
+const lightBgInput=
+  document.getElementById("lightBgInput");
+
+const darkBgInput=
+  document.getElementById("darkBgInput");
+
+const bgReset=
+  document.getElementById("bgReset");
+
+function isValidHex(value){
+  return /^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(
+    value.trim()
+  );
+}
+
+function normalizeHex(value){
+  value=value.trim();
+  return value.startsWith("#")?value:`#${value}`;
+}
+
+function applyCustomBg(){
+  const theme=
+    document.documentElement.dataset.theme==="dark"
+      ?"dark":"light";
+
+  const stored=
+    theme==="dark"
+      ?localStorage.getItem(DARK_BG_KEY)
+      :localStorage.getItem(LIGHT_BG_KEY);
+
+  if(stored&&isValidHex(stored)){
+    document.body.style.backgroundColor=
+      normalizeHex(stored);
+  }else{
+    document.body.style.backgroundColor="";
+  }
+}
+
+const savedLightBg=
+  localStorage.getItem(LIGHT_BG_KEY);
+
+const savedDarkBg=
+  localStorage.getItem(DARK_BG_KEY);
+
+if(savedLightBg)lightBgInput.value=savedLightBg;
+if(savedDarkBg)darkBgInput.value=savedDarkBg;
+
+lightBgInput.addEventListener("input",()=>{
+  const value=lightBgInput.value.trim();
+
+  if(!value){
+    localStorage.removeItem(LIGHT_BG_KEY);
+    applyCustomBg();
+    return;
+  }
+
+  if(!isValidHex(value))return;
+
+  localStorage.setItem(LIGHT_BG_KEY,value);
+  applyCustomBg();
+});
+
+darkBgInput.addEventListener("input",()=>{
+  const value=darkBgInput.value.trim();
+
+  if(!value){
+    localStorage.removeItem(DARK_BG_KEY);
+    applyCustomBg();
+    return;
+  }
+
+  if(!isValidHex(value))return;
+
+  localStorage.setItem(DARK_BG_KEY,value);
+  applyCustomBg();
+});
+
+bgReset.addEventListener("click",()=>{
+  localStorage.removeItem(LIGHT_BG_KEY);
+  localStorage.removeItem(DARK_BG_KEY);
+  lightBgInput.value="";
+  darkBgInput.value="";
+  applyCustomBg();
+});
+
 const themeSwitch=
   document.getElementById(
     "themeSwitch"
@@ -1589,6 +1810,10 @@ function applyTheme(theme){
     "aria-checked",
     String(isDark)
   );
+
+  if(typeof applyCustomBg==="function"){
+    applyCustomBg();
+  }
 }
 
 const stored=
@@ -1674,6 +1899,166 @@ outlineSwitch.addEventListener(
     );
 
     applyOutlineSetting();
+  }
+);
+
+const progressSwitch=
+  document.getElementById(
+    "progressSwitch"
+  );
+
+const PROGRESS_STORAGE_KEY=
+  "timetable-progress-bar";
+
+let progressBarEnabled=
+  localStorage.getItem(
+    PROGRESS_STORAGE_KEY
+  )!=="0";
+
+function applyProgressSetting(){
+  progressSwitch.classList.toggle(
+    "on",
+    progressBarEnabled
+  );
+
+  progressSwitch.setAttribute(
+    "aria-checked",
+    String(progressBarEnabled)
+  );
+}
+
+applyProgressSetting();
+
+progressSwitch.addEventListener(
+  "click",
+  ()=>{
+    progressBarEnabled=!progressBarEnabled;
+
+    localStorage.setItem(
+      PROGRESS_STORAGE_KEY,
+      progressBarEnabled?"1":"0"
+    );
+
+    applyProgressSetting();
+    updateBell();
+  }
+);
+
+function getStudents(raw){
+  const value=
+    raw.Students??
+    raw.students??
+    raw.StudentList??
+    raw.studentList??
+    raw.Enrolments??
+    raw.enrolments??
+    raw.ClassStudents??
+    raw.classStudents??
+    null;
+
+  if(!Array.isArray(value)||!value.length)return null;
+
+  return value.map(s=>{
+    if(typeof s==="string")return s;
+
+    return(
+      s.FullName||s.fullName||
+      [
+        s.FirstName||s.firstName,
+        s.LastName||s.lastName
+      ].filter(Boolean).join(" ")||
+      s.Name||s.name||
+      "Unknown student"
+    );
+  });
+}
+
+const periodOverlay=
+  document.getElementById("periodOverlay");
+
+const periodClose=
+  document.getElementById("periodClose");
+
+const periodPopupSubtitle=
+  document.getElementById("periodPopupSubtitle");
+
+const periodPopupBody=
+  document.getElementById("periodPopupBody");
+
+function detailRow(label,value){
+  return`<div class="detailRow"><div class="detailLabel">${label}</div><div class="detailValue">${value}</div></div>`;
+}
+
+function openPeriodDetails(item,dayKey){
+  periodPopupSubtitle.textContent=
+    `${DAY_LABELS[dayKey]} · Week ${currentWeek}`;
+
+  let html="";
+
+  html+=detailRow("Subject",item.subjName||"");
+  html+=detailRow("Class code",item.code||"");
+
+  if(item.periodNumber)
+    html+=detailRow("Period",item.periodNumber);
+
+  html+=detailRow(
+    "Time",
+    `${formatTime(item.start)} - ${formatTime(item.end)}`
+  );
+
+  if(item.teacher)
+    html+=detailRow("Teacher",item.teacher);
+
+  if(item.room)
+    html+=detailRow("Room",item.room);
+
+  const students=getStudents(item.raw||{});
+
+  if(students){
+    html+=detailRow(
+      "Students",
+      students.length
+    );
+
+    html+=`<div class="detailStudentsNote">${students.join(", ")}</div>`;
+  }else{
+    html+=`<div class="detailStudentsNote">Student list is not provided by the school timetable API.</div>`;
+  }
+
+  periodPopupBody.innerHTML=html;
+
+  periodOverlay.classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function closePeriodDetails(){
+  periodOverlay.classList.remove("open");
+  document.body.style.overflow="";
+}
+
+periodClose.addEventListener(
+  "click",
+  closePeriodDetails
+);
+
+periodOverlay.addEventListener(
+  "click",
+  event=>{
+    if(event.target===periodOverlay){
+      closePeriodDetails();
+    }
+  }
+);
+
+document.addEventListener(
+  "keydown",
+  event=>{
+    if(
+      event.key==="Escape"&&
+      periodOverlay.classList.contains("open")
+    ){
+      closePeriodDetails();
+    }
   }
 );
 
