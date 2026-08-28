@@ -4,6 +4,10 @@ export default async function handler(req,res){
     "https://pugmeowla.github.io"
   );
   res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://www.mscunofficial.com"
+  );
+  res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, OPTIONS"
   );
