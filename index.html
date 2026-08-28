@@ -23,9 +23,9 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 #emailInput:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(10,132,255,.12)}
 #emailInput::placeholder{color:var(--ink-faint)}
 .emailHint{font-size:10.5px;color:var(--ink-faint);margin-top:5px}
-.bellRow{display:flex;gap:12px;flex-wrap:wrap}
-.bell{background:var(--glass-hi);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--line);border-radius:18px;padding:12px 18px;min-width:210px;flex:1 1 210px;box-shadow:var(--shadow-panel)}
-.bell.next{opacity:.92}
+.bellRow{display:flex;gap:12px;flex-wrap:wrap;flex:1 1 320px;min-width:0}
+.bell{background:var(--glass-hi);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--line);border-radius:18px;padding:12px 18px;min-width:210px;flex:3 1 260px;box-shadow:var(--shadow-panel)}
+.bell.next{opacity:.92;flex:1 1 150px;min-width:150px}
 .bell .eyebrow2{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--accent);margin-bottom:3px}
 .bell .line1{font-size:15px;font-weight:600;letter-spacing:-.01em}
 .bell .line2{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
@@ -75,7 +75,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .cls{cursor:pointer}
 .break-card{position:absolute;left:0;right:0;margin-top:3px;margin-bottom:3px;display:flex;align-items:center;justify-content:center;background:var(--break-bg);border:1px dashed var(--break-line);border-radius:16px;color:var(--ink-faint)}
 .break-card .tag{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-.header-right{display:flex;align-items:center;gap:10px}
 .themeToggle{position:static;flex-shrink:0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--glass-hi);color:var(--ink);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);box-shadow:var(--shadow-panel);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:transform .2s ease}
 .themeToggle:hover{transform:scale(1.08)}
 .themeToggle:active{transform:scale(.92)}
@@ -132,19 +131,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 .segRow{display:flex;gap:6px}
 .segBtn{flex:1;padding:8px 6px;border-radius:10px;border:1px solid var(--line);background:var(--glass);color:var(--ink-soft);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .2s ease,color .2s ease}
 .segBtn[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
-.sliderRow{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--glass);border:1px solid var(--line);border-radius:14px}
-.sliderRow+.sliderRow,.sliderRow+.settingsRow,.settingsRow+.sliderRow{margin-top:8px}
-.sliderRow .sliderTop{display:flex;align-items:center;justify-content:space-between}
-.sliderRow input[type=range]{width:100%;accent-color:var(--accent)}
-.colourRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--break-line)}
-.colourRow:last-child{border-bottom:none}
-.colourRowLabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--ink)}
-.colsel{background:var(--glass);border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-family:inherit;font-size:11.5px;color:var(--ink);flex:none;max-width:9.5em}
-.hexSwatch{width:32px;height:28px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer;flex:none}
-.reduce-motion *{transition:none !important}
-.high-contrast{--ink-soft:var(--ink);--ink-faint:var(--ink)}
-.high-contrast{--line:rgba(0,0,0,.45)}
-[data-theme=dark].high-contrast{--line:rgba(255,255,255,.45)}
 
 @media(max-width:760px){
   .header-buttons{flex-direction:row}
@@ -154,8 +140,8 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
   header{flex-direction:column;text-align:center}
   .title-block{display:flex;flex-direction:column;align-items:center;width:100%}
   #emailInput{width:min(260px,90vw)}
-  .header-right{flex-direction:column;width:100%;align-items:center;gap:12px}
-  .bellRow{align-self:stretch;width:100%;max-width:420px;margin:0 auto}
+  .bellRow{align-self:stretch;width:100%;max-width:420px;margin:0 auto;flex:none}
+  .header-buttons{width:100%;justify-content:center;margin-top:12px}
   .bell{text-align:center}
   .refreshRow{justify-content:center}
   .weekSwitch{display:none}
@@ -179,7 +165,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div class="emailHint">Enter the start of your email and press Enter</div>
 </div>
 </div>
-<div class="header-right">
 <div class="bellRow">
 <div class="bell">
 <div class="eyebrow2">NOW</div>
@@ -206,7 +191,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div class="bellRoomLine" id="nextRoomLine">
 <span id="nextRoomText"></span>
 <span class="bellTimeLeft" id="nextTimeLeft"></span>
-</div>
 </div>
 </div>
 </div>
@@ -242,10 +226,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div><div class="settingsLabel">Progress bar</div><div class="settingsHint">Show a progress bar in the NOW box instead of a time range</div></div>
 <div class="switch" id="progressSwitch" role="switch" aria-checked="true" aria-label="Toggle progress bar"><div class="knob"></div></div>
 </div>
-<div class="settingsRow">
-<div><div class="settingsLabel">Week letter on day names</div><div class="settingsHint">Show "Week A / Week B" under each day heading</div></div>
-<div class="switch" id="weekLetterSwitch" role="switch" aria-checked="true" aria-label="Toggle week letter"><div class="knob"></div></div>
-</div>
 <div class="settingsRow" style="flex-direction:column;align-items:stretch;gap:8px">
 <div><div class="settingsLabel">Room numbers</div><div class="settingsHint">How room codes like CR1007.118 are shown</div></div>
 <div class="segRow" id="roomModeRow">
@@ -264,35 +244,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <input type="text" id="darkBgInput" class="hexInput" placeholder="#101114" maxlength="7">
 </div>
 <button class="infoClear bgResetBtn" id="bgReset" type="button">Reset</button>
-</div>
-
-<div class="settingsSubheading">Accessibility</div>
-<div class="sliderRow">
-<div class="sliderTop"><span class="settingsLabel">Text size</span><b id="a_text_v">100%</b></div>
-<input type="range" id="a_text" min="80" max="150" step="5">
-</div>
-<div class="sliderRow">
-<div class="sliderTop"><span class="settingsLabel">Zoom</span><b id="a_zoom_v">100%</b></div>
-<input type="range" id="a_zoom" min="70" max="150" step="5">
-</div>
-<div class="settingsRow">
-<div><div class="settingsLabel">High contrast</div></div>
-<div class="switch" id="contrastSwitch" role="switch" aria-checked="false" aria-label="Toggle high contrast"><div class="knob"></div></div>
-</div>
-<div class="settingsRow">
-<div><div class="settingsLabel">Reduce motion</div></div>
-<div class="switch" id="motionSwitch" role="switch" aria-checked="false" aria-label="Toggle reduce motion"><div class="knob"></div></div>
-</div>
-<div class="settingsRow">
-<div><div class="settingsLabel">Reset accessibility</div></div>
-<button class="infoClear" id="a_reset" type="button">Reset</button>
-</div>
-
-<div class="settingsSubheading">Colours</div>
-<div id="subjectColoursList"></div>
-<div class="settingsRow">
-<div><div class="settingsLabel">Reset colours</div></div>
-<button class="infoClear" id="coloursReset" type="button">Reset</button>
 </div>
 </div>
 <div class="settingsHeading">Notes</div>
@@ -753,37 +704,6 @@ function colorForSubject(key) {
   return subjectColorMap[normalized];
 }
 
-/* ---------- per-subject colour overrides (Settings → Colours) ---------- */
-const SUBJECT_COLOR_KEY = "timetable-subject-colors";
-let subjectColorOverrides = {};
-try {
-  subjectColorOverrides = JSON.parse(localStorage.getItem(SUBJECT_COLOR_KEY) || "{}");
-} catch {
-  subjectColorOverrides = {};
-}
-
-function resolveCssColor(value) {
-  if (!value) return "#000000";
-  const v = String(value).trim();
-  if (v.startsWith("#")) return v;
-  const m = v.match(/^var\((--[a-z0-9-]+)\)$/i);
-  if (m) {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim();
-    return raw || "#000000";
-  }
-  return v;
-}
-
-function toHex(value) {
-  const v = resolveCssColor(value);
-  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : "#0a84ff";
-}
-
-function resolvedColorForSubject(key) {
-  if (subjectColorOverrides[key]) return subjectColorOverrides[key];
-  return colorForSubject(key);
-}
-
 function findBellTime(bellTimes, dayName, period) {
   if (!Array.isArray(bellTimes)) return null;
 
@@ -1109,7 +1029,6 @@ const TIMELINE_END = 14 * 60 + 50;
 const TIMELINE_HEIGHT = 610;
 
 let TIMELINE_START = DEFAULT_TIMELINE_START;
-let showWeekLetter = localStorage.getItem("timetable-week-letter") !== "0";
 
 function hasPeriodZero() {
   const week = SCHEDULE[currentWeek];
@@ -1178,7 +1097,7 @@ function build() {
       (isToday(currentWeek, day) ? " today" : "") +
       (day === mobileDay ? " mobile-active" : "");
 
-    head.innerHTML = `<span class="day-name">${DAY_LABELS[day]}</span>${showWeekLetter ? `<small>Week ${currentWeek}</small>` : ""}`;
+    head.innerHTML = `<span class="day-name">${DAY_LABELS[day]}</span><small>Week ${currentWeek}</small>`;
 
     grid.appendChild(head);
   });
@@ -1292,7 +1211,7 @@ function build() {
 
       card.style.height = `${finalHeight}px`;
 
-      card.style.setProperty("--c", resolvedColorForSubject(item.subjKey));
+      card.style.setProperty("--c", colorForSubject(item.subjKey));
 
       if (isNowActive(currentWeek, day, item.start, item.end)) {
         card.classList.add("now");
@@ -1545,7 +1464,6 @@ async function refresh(force = false) {
 
     build();
     updateBell();
-    renderSubjectColours();
   } catch (err) {
     const message =
       err instanceof ApiError
@@ -1724,10 +1642,6 @@ function applyTheme(theme) {
   if (typeof applyCustomBg === "function") {
     applyCustomBg();
   }
-
-  if (typeof renderSubjectColours === "function") {
-    renderSubjectColours();
-  }
 }
 
 const stored = localStorage.getItem("timetable-theme");
@@ -1795,23 +1709,6 @@ progressSwitch.addEventListener("click", () => {
   updateBell();
 });
 
-/* ---------- Display: week letter toggle ---------- */
-const weekLetterSwitch = document.getElementById("weekLetterSwitch");
-
-function applyWeekLetterSetting() {
-  weekLetterSwitch.classList.toggle("on", showWeekLetter);
-  weekLetterSwitch.setAttribute("aria-checked", String(showWeekLetter));
-}
-
-applyWeekLetterSetting();
-
-weekLetterSwitch.addEventListener("click", () => {
-  showWeekLetter = !showWeekLetter;
-  localStorage.setItem("timetable-week-letter", showWeekLetter ? "1" : "0");
-  applyWeekLetterSetting();
-  build();
-});
-
 /* ---------- Display: room number mode ---------- */
 const roomModeButtons = [...document.querySelectorAll("#roomModeRow .segBtn")];
 
@@ -1829,175 +1726,6 @@ roomModeButtons.forEach((b) => {
     build();
     updateBell();
   });
-});
-
-/* ---------- Accessibility ---------- */
-let textScale = parseFloat(localStorage.getItem("timetable-text-scale") || "1");
-let zoomScale = parseFloat(localStorage.getItem("timetable-zoom") || "1");
-let highContrast = localStorage.getItem("timetable-contrast") === "1";
-let reduceMotion = localStorage.getItem("timetable-motion") === "1";
-
-const a_text = document.getElementById("a_text");
-const a_text_v = document.getElementById("a_text_v");
-const a_zoom = document.getElementById("a_zoom");
-const a_zoom_v = document.getElementById("a_zoom_v");
-const contrastSwitch = document.getElementById("contrastSwitch");
-const motionSwitch = document.getElementById("motionSwitch");
-const a_reset = document.getElementById("a_reset");
-
-function applyAccessibility() {
-  document.documentElement.classList.toggle("high-contrast", highContrast);
-  document.documentElement.classList.toggle("reduce-motion", reduceMotion);
-
-  contrastSwitch.classList.toggle("on", highContrast);
-  contrastSwitch.setAttribute("aria-checked", String(highContrast));
-  motionSwitch.classList.toggle("on", reduceMotion);
-  motionSwitch.setAttribute("aria-checked", String(reduceMotion));
-
-  a_text.value = Math.round(textScale * 100);
-  a_text_v.textContent = Math.round(textScale * 100) + "%";
-  a_zoom.value = Math.round(zoomScale * 100);
-  a_zoom_v.textContent = Math.round(zoomScale * 100) + "%";
-
-  // Combine text scale and zoom into a single CSS zoom on the page —
-  // works in Chromium/Safari-based browsers, which covers most phones/laptops.
-  const combined = textScale * zoomScale;
-  document.body.style.zoom = combined === 1 ? "" : String(combined);
-}
-
-applyAccessibility();
-
-a_text.addEventListener("input", () => {
-  textScale = +a_text.value / 100;
-  localStorage.setItem("timetable-text-scale", String(textScale));
-  applyAccessibility();
-});
-
-a_zoom.addEventListener("input", () => {
-  zoomScale = +a_zoom.value / 100;
-  localStorage.setItem("timetable-zoom", String(zoomScale));
-  applyAccessibility();
-});
-
-contrastSwitch.addEventListener("click", () => {
-  highContrast = !highContrast;
-  localStorage.setItem("timetable-contrast", highContrast ? "1" : "0");
-  applyAccessibility();
-});
-
-motionSwitch.addEventListener("click", () => {
-  reduceMotion = !reduceMotion;
-  localStorage.setItem("timetable-motion", reduceMotion ? "1" : "0");
-  applyAccessibility();
-});
-
-a_reset.addEventListener("click", () => {
-  textScale = 1;
-  zoomScale = 1;
-  highContrast = false;
-  reduceMotion = false;
-  localStorage.removeItem("timetable-text-scale");
-  localStorage.removeItem("timetable-zoom");
-  localStorage.removeItem("timetable-contrast");
-  localStorage.removeItem("timetable-motion");
-  applyAccessibility();
-});
-
-/* ---------- Settings → Colours: per-subject colour picker ---------- */
-const CATEGORY_OPTIONS = [
-  ["math", "Mathematics"],
-  ["english", "English"],
-  ["technology", "Technology"],
-  ["music", "Music"],
-  ["science", "Science"],
-  ["hsie", "HSIE"],
-  ["languages", "Languages"],
-  ["va", "Visual Arts"],
-  ["other", "Other"],
-];
-
-function renderSubjectColours() {
-  const host = document.getElementById("subjectColoursList");
-  if (!host) return;
-  host.innerHTML = "";
-
-  const seen = new Map();
-  ["A", "B"].forEach((w) =>
-    DAY_ORDER.forEach((d) =>
-      (SCHEDULE[w][d] || []).forEach((item) => {
-        if (item.kind === "class" && !seen.has(item.subjKey)) {
-          seen.set(item.subjKey, item.subjName);
-        }
-      }),
-    ),
-  );
-
-  if (!seen.size) {
-    const hint = document.createElement("div");
-    hint.className = "settingsHint";
-    hint.textContent = "Colours appear once a timetable has loaded.";
-    host.appendChild(hint);
-    return;
-  }
-
-  const list = [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-
-  list.forEach(([key, name]) => {
-    const row = document.createElement("div");
-    row.className = "colourRow";
-
-    const label = document.createElement("span");
-    label.className = "colourRowLabel";
-    label.textContent = name;
-
-    const sel = document.createElement("select");
-    sel.className = "colsel";
-    sel.appendChild(new Option("Default", "default"));
-    CATEGORY_OPTIONS.forEach(([k, n]) => sel.appendChild(new Option(n, k)));
-    sel.appendChild(new Option("Custom…", "custom"));
-
-    const sw = document.createElement("input");
-    sw.type = "color";
-    sw.className = "hexSwatch";
-
-    const override = subjectColorOverrides[key];
-    const currentHex = toHex(override || colorForSubject(key));
-    sw.value = currentHex;
-
-    const catMatch = CATEGORY_OPTIONS.find(([k]) => override === `var(--cat-${k})`);
-    sel.value = !override ? "default" : catMatch ? catMatch[0] : "custom";
-    sw.hidden = sel.value !== "custom";
-
-    sel.addEventListener("change", () => {
-      if (sel.value === "default") {
-        delete subjectColorOverrides[key];
-      } else if (sel.value === "custom") {
-        subjectColorOverrides[key] = sw.value;
-      } else {
-        subjectColorOverrides[key] = `var(--cat-${sel.value})`;
-      }
-      localStorage.setItem(SUBJECT_COLOR_KEY, JSON.stringify(subjectColorOverrides));
-      sw.hidden = sel.value !== "custom";
-      sw.value = toHex(subjectColorOverrides[key] || colorForSubject(key));
-      build();
-    });
-
-    sw.addEventListener("input", () => {
-      subjectColorOverrides[key] = sw.value;
-      localStorage.setItem(SUBJECT_COLOR_KEY, JSON.stringify(subjectColorOverrides));
-      build();
-    });
-
-    row.append(label, sel, sw);
-    host.appendChild(row);
-  });
-}
-
-document.getElementById("coloursReset").addEventListener("click", () => {
-  subjectColorOverrides = {};
-  localStorage.removeItem(SUBJECT_COLOR_KEY);
-  renderSubjectColours();
-  build();
 });
 
 function getStudents(raw) {
@@ -2107,8 +1835,6 @@ if (savedInfo !== null) {
 function openInfoPopup() {
   infoOverlay.classList.add("open");
   document.body.style.overflow = "hidden";
-
-  renderSubjectColours();
 
   setTimeout(() => infoTextarea.focus(), 150);
 }
