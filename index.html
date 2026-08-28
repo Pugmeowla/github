@@ -24,23 +24,19 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 #emailInput::placeholder{color:var(--ink-faint)}
 .emailHint{font-size:10.5px;color:var(--ink-faint);margin-top:5px}
 .bellRow{display:flex;gap:12px;flex-wrap:wrap;flex:1 1 320px;min-width:0}
-.bell{background:var(--glass-hi);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--line);border-radius:18px;padding:12px 18px;min-width:210px;flex:3 1 260px;box-shadow:var(--shadow-panel)}
+.bell{background:var(--glass-hi);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--line);border-radius:18px;padding:12px 18px;min-width:210px;flex:3 1 260px;box-shadow:var(--shadow-panel);position:relative}
 .bell.next{opacity:.92;flex:1 1 150px;min-width:150px}
 .bell .eyebrow2{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--accent);margin-bottom:3px}
 .bell .line1{font-size:15px;font-weight:600;letter-spacing:-.01em}
 .bell .line2{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
-.bellProgressWrap{display:flex;align-items:center;gap:8px;margin-top:4px}
+.bellProgressWrap{display:flex;align-items:center;gap:8px;margin-top:4px;margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px;width:calc(100% + 36px)}
 .bellProgressTime{font-size:10.5px;font-weight:600;color:var(--accent);flex-shrink:0}
 .bellProgressTrack{flex:1;height:5px;border-radius:999px;background:rgba(10,132,255,.16);overflow:hidden}
 .bellProgressFill{height:100%;width:0%;background:var(--accent);border-radius:999px;transition:width 1s linear}
 .bellRoomLine{font-size:11px;color:var(--ink-soft);margin-top:3px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .bellTimeLeft{font-weight:600;color:var(--ink-soft);flex-shrink:0}
-.refreshRow{display:flex;align-items:center;gap:8px;margin-top:8px}
-.refreshBtn{font-family:inherit;font-size:11px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--line);border-radius:10px;padding:4px 9px;cursor:pointer;transition:background .2s ease,transform .2s ease}
-.refreshBtn:hover{background:var(--glass-hi)}
-.refreshBtn:active{transform:scale(.95)}
-.refreshBtn[disabled]{opacity:.5;cursor:default}
-.updatedAt{font-size:10.5px;color:var(--ink-faint)}
+.bellRow.progress-off{justify-content:flex-end}
+.bellRow.progress-off .bell:not(.next){flex:1 1 150px;min-width:150px}
 .statusBanner{text-align:center;font-size:13px;font-weight:500;padding:12px 18px;margin-bottom:20px;border-radius:16px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--line);color:var(--ink-soft)}
 .statusBanner.error{color:#c23b2f;border-color:rgba(194,59,47,.35)}
 .arrowbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--glass-hi);color:var(--ink);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s ease,background .2s ease;flex-shrink:0}
@@ -143,7 +139,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
   .bellRow{align-self:stretch;width:100%;max-width:420px;margin:0 auto;flex:none}
   .header-buttons{width:100%;justify-content:center;margin-top:12px}
   .bell{text-align:center}
-  .refreshRow{justify-content:center}
   .weekSwitch{display:none}
   .daySwitch{display:flex}
   .grid{grid-template-columns:1fr;column-gap:0;row-gap:10px}
@@ -165,7 +160,7 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div class="emailHint">Enter the start of your email and press Enter</div>
 </div>
 </div>
-<div class="bellRow">
+<div class="bellRow" id="bellRow">
 <div class="bell">
 <div class="eyebrow2">NOW</div>
 <div class="line1" id="bellLine1">Loading…</div>
@@ -178,10 +173,6 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 <div class="bellRoomLine" id="bellRoomLine">
 <span id="bellRoomText"></span>
 <span class="bellTimeLeft" id="bellTimeLeft"></span>
-</div>
-<div class="refreshRow">
-<button class="refreshBtn" id="refreshBtn" title="Refresh timetable">↻ Refresh</button>
-<span class="updatedAt" id="updatedAt"></span>
 </div>
 </div>
 <div class="bell next">
@@ -196,7 +187,7 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 </div>
 <div class="header-buttons">
 <button class="infoToggle" id="infoToggle" aria-label="Open settings" title="Settings">⚙️</button>
-<a class="infoToggle schoolToggle" href="https://intranet.nbscmanlys-h.schools.nsw.edu.au/" target="_blank" rel="noopener noreferrer" aria-label="Open school intranet" title="School intranet">🏫</a>
+<a class="infoToggle schoolToggle" href="home.html" target="_blank" rel="noopener noreferrer" aria-label="Open school intranet" title="School intranet">🏫</a>
 </div>
 </header>
 
@@ -247,17 +238,13 @@ h1{font-weight:700;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.02em
 </div>
 </div>
 <div class="settingsHeading">Notes</div>
-<textarea class="infoTextarea" id="infoTextarea" placeholder="Hi its me Andre Kwok, this is my timetable replacement I made because the original one looks so bad and the amazing OGGYP Timetable (Which inspired mine) is no longer available. This was made with a lot of love, dedication and too much vibe-coding.
+<textarea class="infoTextarea" id="infoTextarea" placeholder="Welcome to MSC Unofficial, created by Andre Kwok and Alex Burns. You can write extra information here, such as notes about your classes, reminders, or anything else you want to keep track of. This information is automatically saved in your browser and will be available the next time you visit this page.
 
-You can write extra information here, such as notes about your classes, reminders, or anything else you want to keep track of. This information is automatically saved in your browser and will be available the next time you visit this page.
-
-Please don't show this to anyone in the tech block cause I'm scared I'll be executed on the spot for exploiting the schools API.
-
-If anything breaks or if you have any suggestions for me to add, please contanct me at andretnk49@gmail.com, or anywhere else."></textarea>
+Please don't show this to anyone in the tech block cause I'm scared I'll be executed on the spot for exploiting the schools API. If anything breaks or if you have any suggestions for me to add, please contanct us at andre.kwok2@education.nsw.gov.au or alex.burns6@education.nsw.gov.au, or anywhere else."></textarea>
 <div class="infoPopupFooter">
 <span class="infoSaved" id="infoSaved"></span>
 <div class="infoFooterActions">
-<a class="infoRepoLink" id="infoRepoLink" href="https://github.com/Pugmeowla/timetable" target="_blank" rel="noopener noreferrer" title="View source and README on GitHub">Github</a>
+<a class="infoRepoLink" id="infoRepoLink" href="https://github.com/AlexBurns2/timetable" target="_blank" rel="noopener noreferrer" title="View source and README on GitHub">Github</a>
 <button class="infoClear" id="exportCalendarBtn" type="button" title="Download the currently shown timetable (Week A and Week B) as an .ics calendar file">Export .ics</button>
 <button class="infoClear" id="infoClear" type="button">Clear</button>
 </div>
@@ -998,8 +985,6 @@ function normalizeTimetable(rawTimetable, bellTimes) {
 
 const grid = document.getElementById("grid");
 const statusBanner = document.getElementById("statusBanner");
-const refreshBtn = document.getElementById("refreshBtn");
-const updatedAtEl = document.getElementById("updatedAt");
 
 let SCHEDULE = {
   A: { mon: [], tue: [], wed: [], thu: [], fri: [] },
@@ -1322,6 +1307,9 @@ function updateBell() {
   const nextRoomText = document.getElementById("nextRoomText");
   const nextTimeLeft = document.getElementById("nextTimeLeft");
 
+  const bellRow = document.getElementById("bellRow");
+  bellRow.classList.toggle("progress-off", !progressBarEnabled);
+
   progressWrap.style.display = "none";
   roomLine.style.display = "none";
   roomText.textContent = "";
@@ -1421,8 +1409,6 @@ function updateBell() {
 }
 
 async function refresh(force = false) {
-  refreshBtn.disabled = true;
-
   setStatus(force ? "Refreshing timetable…" : "Loading timetable…");
 
   const currentEmail = getCurrentEmail();
@@ -1455,13 +1441,6 @@ async function refresh(force = false) {
 
     setStatus(null);
 
-    if (fetchedAt) {
-      updatedAtEl.textContent = `Updated ${fetchedAt.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    }
-
     build();
     updateBell();
   } catch (err) {
@@ -1473,8 +1452,6 @@ async function refresh(force = false) {
     setStatus(message, true);
 
     console.error("Timetable load failed:", err);
-  } finally {
-    refreshBtn.disabled = false;
   }
 }
 
@@ -1508,8 +1485,6 @@ emailInput.addEventListener("keydown", (event) => {
   event.preventDefault();
   submitEmail();
 });
-
-refreshBtn.addEventListener("click", () => refresh(true));
 
 document.getElementById("weekPrev").addEventListener("click", () => {
   currentWeek = currentWeek === "A" ? "B" : "A";
